@@ -2,30 +2,25 @@
 
 echo "Starting Toyota Enterprise Portal..."
 
-# Start the application in the background
-npm start &
-APP_PID=$!
-
-# Wait for the application to be ready
-echo "Waiting for application to start..."
-sleep 15
-
-# Check if the application is running
-if kill -0 $APP_PID 2>/dev/null; then
-    echo "Application started successfully. Running database seed..."
-    
-    # Run the seed command
-    npm run seed
-    
-    if [ $? -eq 0 ]; then
-        echo "Database seeded successfully!"
-    else
-        echo "Database seeding failed, but application will continue running."
+# Function to handle shutdown signals gracefully
+cleanup() {
+    echo "Received shutdown signal, stopping application..."
+    if [ -n "$APP_PID" ] && kill -0 $APP_PID 2>/dev/null; then
+        echo "Stopping main application process..."
+        kill -TERM $APP_PID
+        wait $APP_PID
     fi
-else
-    echo "Application failed to start!"
-    exit 1
-fi
+    echo "Application stopped gracefully."
+    exit 0
+}
 
-# Wait for the main application process
-wait $APP_PID 
+# Set up signal handlers for graceful shutdown
+trap cleanup SIGTERM SIGINT
+
+# Try to seed database (non-blocking, allow failure)
+echo "Attempting to seed database..."
+npm run seed || echo "Database seeding skipped (may already be seeded)"
+
+# Start the main application
+echo "Starting main application..."
+exec npm start 
