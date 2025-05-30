@@ -22,7 +22,7 @@ import {
   Lock as LockIcon,
 } from '@mui/icons-material';
 import { useUser } from '../../contexts/UserContext';
-import axios from 'axios';
+import { api } from '../../config/api';
 
 const UserProfile = () => {
   const [formData, setFormData] = useState({
@@ -62,8 +62,8 @@ const UserProfile = () => {
       const headers = { Authorization: `Bearer ${token}` };
 
       // Update basic profile
-      const profileResponse = await axios.put(
-        'http://localhost:8080/api/users/profile',
+      const profileResponse = await api.put(
+        '/users/profile',
         {
           username: formData.username,
           email: formData.email,
@@ -85,8 +85,8 @@ const UserProfile = () => {
           return;
         }
 
-        await axios.put(
-          'http://localhost:8080/api/users/password',
+        await api.put(
+          '/users/password',
           {
             currentPassword: formData.currentPassword,
             newPassword: formData.newPassword,

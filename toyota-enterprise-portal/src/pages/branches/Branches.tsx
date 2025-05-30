@@ -21,14 +21,16 @@ import {
   CircularProgress,
   Tooltip,
   MenuItem,
+  Grid,
 } from '@mui/material';
 import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   Add as AddIcon,
   Business as BranchIcon,
+  LocationOn as LocationIcon,
 } from '@mui/icons-material';
-import axios from 'axios';
+import { api } from '../../config/api';
 
 interface Branch {
   id: number;
@@ -79,7 +81,7 @@ const Branches = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:8080/api/branches', {
+      const response = await api.get('/branches', {
         headers: { Authorization: `Bearer ${token}` },
       });
       setBranches(response.data);
@@ -102,7 +104,7 @@ const Branches = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.post('http://localhost:8080/api/branches', formData, {
+      const response = await api.post('/branches', formData, {
         headers: { Authorization: `Bearer ${token}` },
       });
       
@@ -141,7 +143,7 @@ const Branches = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.put(`http://localhost:8080/api/branches/${editingBranch.id}`, editFormData, {
+      const response = await api.put(`/branches/${editingBranch.id}`, editFormData, {
         headers: { Authorization: `Bearer ${token}` },
       });
       
@@ -166,7 +168,7 @@ const Branches = () => {
     if (window.confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) {
       try {
         const token = localStorage.getItem('token');
-        await axios.delete(`http://localhost:8080/api/branches/${id}`, {
+        await api.delete(`/branches/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setBranches(branches.filter(branch => branch.id !== id));

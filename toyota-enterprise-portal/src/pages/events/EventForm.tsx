@@ -231,7 +231,7 @@ const EventForm = () => {
   };
 
   const downloadAttachment = (attachment: Attachment) => {
-    const url = `http://localhost:8080${attachment.fileUrl}`;
+    const url = `${(api.defaults.baseURL || 'http://localhost:8080/api').replace('/api', '')}${attachment.fileUrl}`;
     window.open(url, '_blank');
   };
 

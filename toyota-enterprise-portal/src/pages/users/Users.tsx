@@ -21,6 +21,10 @@ import {
   Alert,
   CircularProgress,
   Tooltip,
+  FormControl,
+  InputLabel,
+  Select,
+  Grid,
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -28,7 +32,7 @@ import {
   Add as AddIcon,
   Person as PersonIcon,
 } from '@mui/icons-material';
-import axios from 'axios';
+import { api } from '../../config/api';
 
 interface User {
   id: number;
@@ -79,13 +83,13 @@ const Users = () => {
       const token = localStorage.getItem('token');
       
       // Fetch users
-      const usersResponse = await axios.get('http://localhost:8080/api/users', {
+      const usersResponse = await api.get('/users', {
         headers: { Authorization: `Bearer ${token}` },
       });
       setUsers(usersResponse.data);
 
       // Fetch branches
-      const branchesResponse = await axios.get('http://localhost:8080/api/branches', {
+      const branchesResponse = await api.get('/branches', {
         headers: { Authorization: `Bearer ${token}` },
       });
       setBranches(branchesResponse.data);
@@ -118,7 +122,7 @@ const Users = () => {
         ...(formData.branchId && formData.branchId !== '' && { branchId: parseInt(formData.branchId) })
       };
 
-      const response = await axios.post('http://localhost:8080/api/users', payload, {
+      const response = await api.post('/users', payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
       
@@ -166,7 +170,7 @@ const Users = () => {
         ...(editFormData.branchId && editFormData.branchId !== '' && { branchId: parseInt(editFormData.branchId) })
       };
 
-      const response = await axios.put(`http://localhost:8080/api/users/${editingUser.id}`, payload, {
+      const response = await api.put(`/users/${editingUser.id}`, payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
       
@@ -193,7 +197,7 @@ const Users = () => {
     if (window.confirm(`Are you sure you want to delete user "${username}"? This action cannot be undone.`)) {
       try {
         const token = localStorage.getItem('token');
-        await axios.delete(`http://localhost:8080/api/users/${id}`, {
+        await api.delete(`/users/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setUsers(users.filter(user => user.id !== id));

@@ -27,7 +27,7 @@ import {
   Add as AddIcon,
   Category as CategoryIcon,
 } from '@mui/icons-material';
-import axios from 'axios';
+import { api } from '../config/api';
 
 interface EventType {
   id: number;
@@ -67,7 +67,7 @@ const EventTypes = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:8080/api/event-types', {
+      const response = await api.get('/event-types', {
         headers: { Authorization: `Bearer ${token}` },
       });
       setEventTypes(response.data);
@@ -82,7 +82,7 @@ const EventTypes = () => {
   const handleCreateEventType = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.post('http://localhost:8080/api/event-types', formData, {
+      const response = await api.post('/event-types', formData, {
         headers: { Authorization: `Bearer ${token}` },
       });
       
@@ -114,8 +114,8 @@ const EventTypes = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.put(
-        `http://localhost:8080/api/event-types/${editingEventType.id}`,
+      const response = await api.put(
+        `/event-types/${editingEventType.id}`,
         editFormData,
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -142,7 +142,7 @@ const EventTypes = () => {
     if (window.confirm(`Are you sure you want to delete event type "${name}"? This action cannot be undone.`)) {
       try {
         const token = localStorage.getItem('token');
-        await axios.delete(`http://localhost:8080/api/event-types/${id}`, {
+        await api.delete(`/event-types/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setEventTypes(eventTypes.filter(et => et.id !== id));

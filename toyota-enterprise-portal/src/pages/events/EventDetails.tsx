@@ -42,7 +42,7 @@ import {
   Schedule as ScheduleIcon,
   Comment as CommentIcon,
 } from '@mui/icons-material';
-import axios from 'axios';
+import { api } from '../../config/api';
 import { formatINR } from '../../utils/format';
 
 interface Event {
@@ -120,13 +120,13 @@ const EventDetails = () => {
         const token = localStorage.getItem('token');
         
         // Fetch event details
-        const response = await axios.get(`http://localhost:8080/api/events/${id}`, {
+        const response = await api.get(`/events/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setEvent(response.data);
 
         // Fetch current user info
-        const userResponse = await axios.get('http://localhost:8080/api/auth/me', {
+        const userResponse = await api.get('/auth/me', {
           headers: { Authorization: `Bearer ${token}` },
         });
         setCurrentUserRole(userResponse.data.role);
@@ -145,7 +145,7 @@ const EventDetails = () => {
     if (window.confirm('Are you sure you want to delete this event?')) {
       try {
         const token = localStorage.getItem('token');
-        await axios.delete(`http://localhost:8080/api/events/${id}`, {
+        await api.delete(`/events/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         navigate('/events');
@@ -175,7 +175,7 @@ const EventDetails = () => {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.patch(`http://localhost:8080/api/events/${id}/status`, 
+      await api.patch(`/events/${id}/status`, 
         { 
           status: selectedAction.status,
           comment: comment.trim() || undefined
@@ -184,7 +184,7 @@ const EventDetails = () => {
       );
       
       // Refresh the event data
-      const response = await axios.get(`http://localhost:8080/api/events/${id}`, {
+      const response = await api.get(`/events/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setEvent(response.data);
@@ -879,7 +879,7 @@ const EventDetails = () => {
                             boxShadow: 2
                           }
                         }}
-                        onClick={() => window.open(`http://localhost:8080${attachment.fileUrl}`, '_blank')}
+                        onClick={() => window.open(`${(api.defaults.baseURL || 'http://localhost:8080/api').replace('/api', '')}${attachment.fileUrl}`, '_blank')}
                       >
                         <Stack direction="row" spacing={1} alignItems="center">
                           <DownloadIcon color="primary" />

@@ -335,7 +335,7 @@ const Dashboard = () => {
 
       console.log('Fetching data for branch:', branchId);
       console.log('API URLs:', {
-        summary: `http://localhost:8080/api/dashboard/summary${branchParam}`,
+        summary: `${api.defaults.baseURL || 'http://localhost:8080/api'}/dashboard/summary${branchParam}`,
       });
 
       const [summaryRes] = await Promise.all([

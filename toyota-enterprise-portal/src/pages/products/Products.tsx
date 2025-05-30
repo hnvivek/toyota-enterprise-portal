@@ -21,14 +21,15 @@ import {
   CircularProgress,
   Tooltip,
   MenuItem,
+  Grid,
 } from '@mui/material';
 import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   Add as AddIcon,
-  ShoppingCart as ProductIcon,
+  Inventory as ProductIcon,
 } from '@mui/icons-material';
-import axios from 'axios';
+import { api } from '../../config/api';
 import { formatINR } from '../../utils/format';
 
 interface Product {
@@ -80,7 +81,7 @@ const Products = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:8080/api/products', {
+      const response = await api.get('/products', {
         headers: { Authorization: `Bearer ${token}` },
       });
       setProducts(response.data);
@@ -108,7 +109,7 @@ const Products = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.post('http://localhost:8080/api/products', formData, {
+      const response = await api.post('/products', formData, {
         headers: { Authorization: `Bearer ${token}` },
       });
       
@@ -153,7 +154,7 @@ const Products = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.put(`http://localhost:8080/api/products/${editingProduct.id}`, editFormData, {
+      const response = await api.put(`/products/${editingProduct.id}`, editFormData, {
         headers: { Authorization: `Bearer ${token}` },
       });
       
@@ -178,7 +179,7 @@ const Products = () => {
     if (window.confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) {
       try {
         const token = localStorage.getItem('token');
-        await axios.delete(`http://localhost:8080/api/products/${id}`, {
+        await api.delete(`/products/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setProducts(products.filter(product => product.id !== id));
