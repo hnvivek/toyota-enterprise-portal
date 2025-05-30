@@ -200,31 +200,103 @@ async function seedEventTypes() {
   return createdEventTypes;
 }
 
-async function seedDefaultUser() {
+async function seedUsers(branches: Branch[]): Promise<User | null> {
   const userRepository = AppDataSource.getRepository(User);
   
-  // Check if admin user already exists
-  const existingAdmin = await userRepository.findOne({
-    where: { email: 'admin@toyota.com' }
-  });
-  
-  if (existingAdmin) {
-    console.log('Admin user already exists, skipping creation');
-    return existingAdmin;
-  }
+  // Default users for each role with single branch assignments for workflow
+  const usersToCreate = [
+    {
+      username: 'admin',
+      email: 'admin@toyota.com',
+      password: 'admin123',
+      role: UserRole.ADMIN,
+      branch: null, // Admin has access to all branches
+      description: 'System Administrator - All Branches Access'
+    },
+    {
+      username: 'priya_sales',
+      email: 'priya.sales@toyota.com',
+      password: 'sales123',
+      role: UserRole.SALES_MANAGER,
+      branch: branches[2], // Assigned to Whitefield branch only
+      description: 'Sales Manager - Whitefield Branch'
+    },
+    {
+      username: 'rajesh_gm',
+      email: 'rajesh.gm@toyota.com',
+      password: 'gm123',
+      role: UserRole.GENERAL_MANAGER,
+      branch: branches[2], // Assigned to Whitefield branch only
+      description: 'General Manager - Whitefield Branch'
+    },
+    {
+      username: 'arun_marketing',
+      email: 'arun.marketing@toyota.com',
+      password: 'marketing123',
+      role: UserRole.MARKETING_MANAGER,
+      branch: branches[3], // Assigned to KP Road branch only
+      description: 'Marketing Manager - KP Road Branch'
+    },
+    {
+      username: 'kavya_marketing_head',
+      email: 'kavya.head@toyota.com',
+      password: 'head123',
+      role: UserRole.MARKETING_HEAD,
+      branch: null, // Marketing head oversees all branches
+      description: 'Regional Marketing Head - All Branches'
+    }
+  ];
 
-  const hashedPassword = await bcrypt.hash('admin123', 10);
-  const admin = userRepository.create({
-    username: 'admin',
-    email: 'admin@toyota.com',
-    password: hashedPassword,
-    role: UserRole.ADMIN
-  });
+  let adminUser: User | null = null;
+
+  for (const userData of usersToCreate) {
+    // Check if user already exists
+    const existingUser = await userRepository.findOne({
+      where: { email: userData.email }
+    });
+    
+    if (existingUser) {
+      console.log(`User ${userData.username} already exists, skipping creation`);
+      if (userData.role === UserRole.ADMIN) {
+        adminUser = existingUser;
+      }
+      continue;
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(userData.password, 10);
+
+    // Create user data
+    const userCreateData: any = {
+      username: userData.username,
+      email: userData.email,
+      password: hashedPassword,
+      role: userData.role
+    };
+
+    // Assign branch and region if specified
+    if (userData.branch) {
+      userCreateData.branch = userData.branch;
+      userCreateData.region = userData.branch.region;
+    }
+
+    const user = userRepository.create(userCreateData);
+    const savedUser: any = await userRepository.save(user);
+    
+    if (userData.role === UserRole.ADMIN) {
+      adminUser = savedUser;
+    }
+    
+    console.log(`Created user: ${userData.username} (${userData.role}) - ${userData.description}`);
+  }
   
-  const savedAdmin = await userRepository.save(admin);
-  console.log('Created admin user');
-  
-  return savedAdmin;
+  console.log(`Created users with single branch assignments for workflow:`);
+  console.log(`- Admin: All branches access`);
+  console.log(`- Sales Manager: Whitefield branch only`);
+  console.log(`- General Manager: Whitefield branch only`);
+  console.log(`- Marketing Manager: KP Road branch only`);
+  console.log(`- Marketing Head: All branches oversight`);
+  return adminUser;
 }
 
 async function seedEvents(branches: Branch[], eventTypes: EventType[], user: User, products: Product[]) {
@@ -317,7 +389,12 @@ export async function seed() {
     const createdBranches = await seedBranches();
     const createdProducts = await seedProducts();
     const createdEventTypes = await seedEventTypes();
-    const adminUser = await seedDefaultUser();
+    const adminUser = await seedUsers(createdBranches);
+    
+    // Use admin user for creating events
+    if (!adminUser) {
+      throw new Error('Admin user not found in created users');
+    }
     
     // Create events with proper relationships
     await seedEvents(createdBranches, createdEventTypes, adminUser, createdProducts);
