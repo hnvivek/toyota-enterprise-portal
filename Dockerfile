@@ -6,6 +6,10 @@ WORKDIR /app/frontend
 COPY toyota-enterprise-portal/package*.json ./
 RUN npm ci
 
+# Set environment variables for React build
+ENV NODE_ENV=production
+ENV REACT_APP_API_URL=/api
+
 COPY toyota-enterprise-portal/ ./
 RUN npm run build
 
@@ -23,6 +27,9 @@ RUN npm run build
 FROM node:18-alpine AS production
 
 WORKDIR /app
+
+# Set production environment
+ENV NODE_ENV=production
 
 # Install curl for health checks
 RUN apk add --no-cache curl

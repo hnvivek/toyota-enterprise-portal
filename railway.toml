@@ -17,4 +17,5 @@ generate = true
 
 [services.variables]
 NODE_ENV = "production"
+REACT_APP_API_URL = "/api"
 PORT = "8080" 
