@@ -1,41 +1,29 @@
 import axios from 'axios';
 
-// Build timestamp to force new build: 2024-05-30T03:30:00Z
-console.log('🏗️ API Config Build Time:', new Date().toISOString());
-
-// Check if we're running on Railway or localhost
-const isLocalDevelopment = typeof window !== 'undefined' && 
-                          (window.location.hostname === 'localhost' || 
-                           window.location.hostname === '127.0.0.1');
-
-const isRailwayProduction = typeof window !== 'undefined' && 
-                           (window.location.hostname.includes('railway.app') || 
-                            window.location.hostname.includes('up.railway.app'));
-
-// API URL configuration - be very explicit
+// Simple and reliable API URL configuration
 let API_URL;
+
 if (process.env.REACT_APP_API_URL) {
+  // Use environment variable (set in Railway: REACT_APP_API_URL="/api")
   API_URL = process.env.REACT_APP_API_URL;
   console.log('🔧 Using REACT_APP_API_URL:', API_URL);
-} else if (isRailwayProduction) {
-  API_URL = '/api'; // Production: same domain - CORRECT FOR RAILWAY
-  console.log('🚂 Railway detected - using relative API URL:', API_URL);
-} else if (isLocalDevelopment) {
-  API_URL = 'http://localhost:8080/api'; // Development
+} else if (typeof window !== 'undefined' && (
+  window.location.hostname === 'localhost' || 
+  window.location.hostname === '127.0.0.1'
+)) {
+  // Local development
+  API_URL = 'http://localhost:8080/api';
   console.log('🏠 Local development detected - using localhost:', API_URL);
 } else {
-  // Fallback for any other environment
+  // Production fallback (Railway, etc.)
   API_URL = '/api';
-  console.log('🌍 Unknown environment - using relative API URL:', API_URL);
+  console.log('🌍 Production environment - using relative API URL:', API_URL);
 }
 
-console.log('🔍 API Configuration Debug:', {
+console.log('🔍 Final API Configuration:', {
   NODE_ENV: process.env.NODE_ENV,
   REACT_APP_API_URL: process.env.REACT_APP_API_URL,
   hostname: typeof window !== 'undefined' ? window.location.hostname : 'server',
-  href: typeof window !== 'undefined' ? window.location.href : 'server',
-  isLocalDevelopment,
-  isRailwayProduction,
   finalAPI_URL: API_URL
 });
 
