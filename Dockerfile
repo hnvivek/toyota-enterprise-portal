@@ -40,6 +40,10 @@ COPY --from=frontend-build /app/frontend/build ./public
 # Create uploads directory
 RUN mkdir -p uploads
 
+# Copy startup script
+COPY start.sh ./
+RUN chmod +x start.sh
+
 # Expose port
 EXPOSE 8080
 
@@ -47,5 +51,5 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:8080/api/health || exit 1
 
-# Start the application
-CMD ["npm", "start"] 
+# Start the application with seeding
+CMD ["./start.sh"] 
