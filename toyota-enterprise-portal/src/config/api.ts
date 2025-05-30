@@ -1,5 +1,8 @@
 import axios from 'axios';
 
+// Build timestamp to force new build: 2024-05-30T03:30:00Z
+console.log('🏗️ API Config Build Time:', new Date().toISOString());
+
 // Check if we're running on Railway or localhost
 const isLocalDevelopment = typeof window !== 'undefined' && 
                           (window.location.hostname === 'localhost' || 
@@ -15,7 +18,7 @@ if (process.env.REACT_APP_API_URL) {
   API_URL = process.env.REACT_APP_API_URL;
   console.log('🔧 Using REACT_APP_API_URL:', API_URL);
 } else if (isRailwayProduction) {
-  API_URL = '/api'; // Production: same domain
+  API_URL = '/api'; // Production: same domain - CORRECT FOR RAILWAY
   console.log('🚂 Railway detected - using relative API URL:', API_URL);
 } else if (isLocalDevelopment) {
   API_URL = 'http://localhost:8080/api'; // Development
