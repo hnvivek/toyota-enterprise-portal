@@ -10,7 +10,7 @@ import {
   Paper,
   Alert,
 } from '@mui/material';
-import axios from 'axios';
+import { api } from '../../config/api';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -39,7 +39,7 @@ const Register = () => {
     }
 
     try {
-      const response = await axios.post('http://localhost:8080/api/auth/register', {
+      const response = await api.post('/auth/register', {
         username: formData.username,
         email: formData.email,
         password: formData.password,

@@ -1,11 +1,12 @@
-import axios from 'axios';
+import { api } from '../config/api';
 
-const API_BASE_URL = 'http://localhost:8080/api';
-
+// Helper function to get auth headers
 const getAuthHeaders = () => {
   const token = localStorage.getItem('token');
   return {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
   };
 };
 
@@ -116,8 +117,8 @@ export const eventService = {
       }
     });
 
-    const response = await axios.get(
-      `${API_BASE_URL}/events?${params.toString()}`,
+    const response = await api.get(
+      `/events?${params.toString()}`,
       getAuthHeaders()
     );
     return response.data;
@@ -125,8 +126,8 @@ export const eventService = {
 
   // Get filter options
   async getFilterOptions(): Promise<FilterOptions> {
-    const response = await axios.get(
-      `${API_BASE_URL}/events/filter-options`,
+    const response = await api.get(
+      `/events/filter-options`,
       getAuthHeaders()
     );
     return response.data;
@@ -138,8 +139,8 @@ export const eventService = {
     if (branchId) params.append('branchId', String(branchId));
     params.append('limit', String(limit));
 
-    const response = await axios.get(
-      `${API_BASE_URL}/events/recent?${params.toString()}`,
+    const response = await api.get(
+      `/events/recent?${params.toString()}`,
       getAuthHeaders()
     );
     return response.data;
@@ -147,8 +148,8 @@ export const eventService = {
 
   // Get event by ID
   async getEventById(id: number): Promise<Event> {
-    const response = await axios.get(
-      `${API_BASE_URL}/events/${id}`,
+    const response = await api.get(
+      `/events/${id}`,
       getAuthHeaders()
     );
     return response.data;
@@ -156,8 +157,8 @@ export const eventService = {
 
   // Create event
   async createEvent(eventData: Partial<Event>): Promise<Event> {
-    const response = await axios.post(
-      `${API_BASE_URL}/events`,
+    const response = await api.post(
+      `/events`,
       eventData,
       getAuthHeaders()
     );
@@ -166,8 +167,8 @@ export const eventService = {
 
   // Update event
   async updateEvent(id: number, eventData: Partial<Event>): Promise<Event> {
-    const response = await axios.put(
-      `${API_BASE_URL}/events/${id}`,
+    const response = await api.put(
+      `/events/${id}`,
       eventData,
       getAuthHeaders()
     );
@@ -176,16 +177,16 @@ export const eventService = {
 
   // Delete event
   async deleteEvent(id: number): Promise<void> {
-    await axios.delete(
-      `${API_BASE_URL}/events/${id}`,
+    await api.delete(
+      `/events/${id}`,
       getAuthHeaders()
     );
   },
 
   // Get pending approvals for current user
   async getPendingApprovals(): Promise<Event[]> {
-    const response = await axios.get(
-      `${API_BASE_URL}/events/pending-approvals`,
+    const response = await api.get(
+      `/events/pending-approvals`,
       getAuthHeaders()
     );
     return response.data;

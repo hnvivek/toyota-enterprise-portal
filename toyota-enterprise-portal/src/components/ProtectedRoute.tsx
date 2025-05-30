@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import { Navigate } from 'react-router-dom';
 import { Box, CircularProgress, Typography } from '@mui/material';
-import axios from 'axios';
+import { api } from '../config/api';
+import { AuthContext } from '../App';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -29,7 +30,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRoles
           return;
         }
 
-        const response = await axios.get('http://localhost:8080/api/auth/me', {
+        const response = await api.get('/auth/me', {
           headers: { Authorization: `Bearer ${token}` },
         });
 

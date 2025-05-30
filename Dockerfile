@@ -6,12 +6,22 @@ WORKDIR /app/frontend
 COPY toyota-enterprise-portal/package*.json ./
 RUN npm ci
 
-# Set environment variables for React build
+# Set environment variables for React build - EXPLICIT SETTING
 ENV NODE_ENV=production
 ENV REACT_APP_API_URL=/api
 
+# Debug: Show environment variables during build
+RUN echo "🔍 Build Environment:" && \
+    echo "NODE_ENV: $NODE_ENV" && \
+    echo "REACT_APP_API_URL: $REACT_APP_API_URL"
+
 COPY toyota-enterprise-portal/ ./
-RUN npm run build
+
+# Build with explicit environment variables
+RUN REACT_APP_API_URL=/api NODE_ENV=production npm run build
+
+# Debug: Check if build completed
+RUN echo "✅ React build completed" && ls -la build/
 
 # Stage 2: Build backend
 FROM node:18-alpine AS backend-build

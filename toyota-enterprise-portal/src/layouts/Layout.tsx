@@ -28,6 +28,10 @@ import {
   Collapse,
   Paper,
   Button,
+  Fab,
+  Dialog,
+  DialogTitle,
+  DialogContent,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -52,12 +56,13 @@ import {
   Assessment as ReportsIcon,
   Home as HomeIcon,
   Category as CategoryIcon,
+  Add as AddIcon,
 } from '@mui/icons-material';
 import { AuthContext } from '../App';
 import { useThemeContext } from '../config/theme';
 import { useUser } from '../contexts/UserContext';
 import ToyotaLogo from '../assets/images/toyota-logo.svg';
-import axios from 'axios';
+import { api } from '../config/api';
 
 const drawerWidth = 280;
 
@@ -89,13 +94,13 @@ const Layout = () => {
       console.log('Fetching notifications and badges for user:', currentUser);
 
       // Fetch notifications
-      const notificationResponse = await axios.get('http://localhost:8080/api/notifications', { headers });
+      const notificationResponse = await api.get('/notifications', { headers });
       console.log('Notification response:', notificationResponse.data);
       setNotifications(notificationResponse.data.notifications || []);
       setUnreadNotifications(notificationResponse.data.unreadCount || 0);
 
       // Fetch separate badge counts
-      const badgeResponse = await axios.get('http://localhost:8080/api/stats/events/badge', { headers });
+      const badgeResponse = await api.get('/stats/events/badge', { headers });
       console.log('Events badge response:', badgeResponse.data);
       
       // Events badge should only show new events (not pending approvals)
@@ -122,7 +127,7 @@ const Layout = () => {
       if (!token) return;
 
       const headers = { Authorization: `Bearer ${token}` };
-      const badgeResponse = await axios.get('http://localhost:8080/api/stats/events/badge', { headers });
+      const badgeResponse = await api.get('/stats/events/badge', { headers });
       console.log('Badges refreshed:', badgeResponse.data);
       
       const newEventsCount = badgeResponse.data.newEvents || 0;
@@ -180,7 +185,7 @@ const Layout = () => {
       const token = localStorage.getItem('token');
       if (token && !notification.isRead) {
         const headers = { Authorization: `Bearer ${token}` };
-        await axios.put(`http://localhost:8080/api/notifications/${notification.id}/read`, {}, { headers });
+        await api.put(`/notifications/${notification.id}/read`, {}, { headers });
         
         // Update local state
         setNotifications(prev => 

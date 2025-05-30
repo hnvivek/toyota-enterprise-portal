@@ -33,8 +33,9 @@ import {
   BarChart as BarChartIcon,
   Analytics as AnalyticsIcon,
 } from '@mui/icons-material';
-import axios from 'axios';
+import { api } from '../config/api';
 import { formatINR } from '../utils/format';
+import { useUser } from '../contexts/UserContext';
 
 interface SummaryCardProps {
   title: string;
@@ -338,7 +339,7 @@ const Dashboard = () => {
       });
 
       const [summaryRes] = await Promise.all([
-        axios.get(`http://localhost:8080/api/dashboard/summary${branchParam}`, { headers }),
+        api.get(`/dashboard/summary${branchParam}`, { headers }),
       ]);
 
       console.log('Summary response:', summaryRes.data);
@@ -368,7 +369,7 @@ const Dashboard = () => {
       }
       
       const headers = { Authorization: `Bearer ${token}` };
-      const response = await axios.get('http://localhost:8080/api/branches', { headers });
+      const response = await api.get('/branches', { headers });
       setBranches(response.data);
     } catch (error: any) {
       console.error('Error fetching branches:', error);

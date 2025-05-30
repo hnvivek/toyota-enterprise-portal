@@ -28,25 +28,39 @@ import {
   Refresh as RefreshIcon,
   Search as SearchIcon,
   FileDownload as ExportIcon,
+  FilterList as FilterIcon,
+  CalendarToday as CalendarIcon,
+  BarChart as StatsIcon,
+  NotificationImportant as ImportantIcon,
+  Business as BranchIcon,
+  Science as ScienceIcon,
+  Close as CloseIcon,
   Clear as ClearIcon,
   ViewColumn as ViewColumnIcon,
-  MoreVert as MoreVertIcon,
   Event as EventIcon,
+  MoreVert as MoreVertIcon,
 } from '@mui/icons-material';
-
-// PrimeReact imports
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
-import { InputText } from 'primereact/inputtext';
-import { MultiSelect } from 'primereact/multiselect';
-import { Dropdown } from 'primereact/dropdown';
 import { Calendar } from 'primereact/calendar';
+import { Dropdown } from 'primereact/dropdown';
+import { InputText } from 'primereact/inputtext';
+import { Button as PrimeButton } from 'primereact/button';
+import { Toolbar as PrimeToolbar } from 'primereact/toolbar';
+import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
+import { Toast } from 'primereact/toast';
+import { FilterMatchMode, FilterOperator } from 'primereact/api';
+import { api } from '../../config/api';
+import { formatINR } from '../../utils/format';
+import { useUser } from '../../contexts/UserContext';
+
+// PrimeReact imports
+import { MultiSelect } from 'primereact/multiselect';
 import { Tag } from 'primereact/tag';
 import { ProgressSpinner } from 'primereact/progressspinner';
-import { Toast } from 'primereact/toast';
-import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
 import { Menu as PrimeMenu } from 'primereact/menu';
-import { FilterMatchMode, FilterOperator } from 'primereact/api';
+import { styled } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
 
 // PrimeReact CSS with custom styling
 import 'primereact/resources/themes/lara-light-indigo/theme.css';
@@ -60,10 +74,7 @@ import {
   EventsResponse, 
   Event 
 } from '../../services/eventService';
-import { formatINR } from '../../utils/format';
-import axios from 'axios';
-import { alpha, styled } from '@mui/material/styles';
-import { useTheme } from '@mui/material/styles';
+import { alpha } from '@mui/material/styles';
 
 // Custom styled DataTable to match Material-UI theme
 const StyledDataTableWrapper = styled(Box)(({ theme }) => ({
@@ -323,7 +334,7 @@ const Events = () => {
   const fetchCurrentUser = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:8080/api/auth/me', {
+      const response = await api.get('/auth/me', {
         headers: { Authorization: `Bearer ${token}` },
       });
       setCurrentUser({ 
@@ -436,7 +447,7 @@ const Events = () => {
       try {
         const token = localStorage.getItem('token');
         if (token) {
-          await axios.post('http://localhost:8080/api/stats/events/mark-seen', {}, {
+          await api.post('/stats/events/mark-seen', {}, {
             headers: { Authorization: `Bearer ${token}` }
           });
           
@@ -840,7 +851,7 @@ const Events = () => {
           />
           <Button 
             variant="outlined" 
-            startIcon={<ClearIcon />} 
+            startIcon={<CloseIcon />} 
             onClick={clearFilter}
             size="small"
           >
@@ -851,7 +862,7 @@ const Events = () => {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Button
             variant="outlined"
-            startIcon={<ViewColumnIcon />}
+            startIcon={<FilterIcon />}
             onClick={(e) => setColumnMenuAnchor(e.currentTarget)}
             size="small"
             sx={{ whiteSpace: 'nowrap' }}
@@ -966,7 +977,7 @@ const Events = () => {
                 onClick={async () => {
                   try {
                     const token = localStorage.getItem('token');
-                    const response = await axios.get('http://localhost:8080/api/stats/debug/badge-breakdown', {
+                    const response = await api.get('/stats/debug/badge-breakdown', {
                       headers: { Authorization: `Bearer ${token}` }
                     });
                     const data = response.data;
@@ -991,7 +1002,7 @@ const Events = () => {
                 onClick={async () => {
                   try {
                     const token = localStorage.getItem('token');
-                    const response = await axios.post('http://localhost:8080/api/events/demo/create-new-event', {}, {
+                    const response = await api.post('/events/demo/create-new-event', {}, {
                       headers: { Authorization: `Bearer ${token}` }
                     });
                     toast.current?.show({

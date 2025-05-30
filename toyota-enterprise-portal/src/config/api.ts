@@ -1,5 +1,14 @@
 import axios from 'axios';
 
+// Debug: Log the environment details
+console.log('🔧 API Configuration Debug:', {
+  NODE_ENV: process.env.NODE_ENV,
+  REACT_APP_API_URL: process.env.REACT_APP_API_URL,
+  window_hostname: typeof window !== 'undefined' ? window.location.hostname : 'server-side',
+  window_port: typeof window !== 'undefined' ? window.location.port : 'server-side',
+  window_href: typeof window !== 'undefined' ? window.location.href : 'server-side'
+});
+
 // Simple and reliable API URL configuration
 let API_URL;
 

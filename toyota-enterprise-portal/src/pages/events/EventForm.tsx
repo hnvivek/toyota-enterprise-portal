@@ -25,7 +25,7 @@ import { ArrowBack as ArrowBackIcon, Event as EventIcon, Schedule as ScheduleIco
 import { LocalizationProvider, DateTimePicker, StaticDatePicker, TimePicker } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
-import axios from 'axios';
+import { api } from '../../config/api';
 
 interface Branch {
   id: number;
@@ -101,9 +101,9 @@ const EventForm = () => {
 
         // Fetch branches, products, and event types
         const [branchesRes, productsRes, eventTypesRes] = await Promise.all([
-          axios.get('http://localhost:8080/api/branches', { headers }),
-          axios.get('http://localhost:8080/api/products', { headers }),
-          axios.get('http://localhost:8080/api/event-types', { headers }),
+          api.get('branches', { headers }),
+          api.get('products', { headers }),
+          api.get('event-types', { headers }),
         ]);
 
         console.log('Fetched branches:', branchesRes.data);
@@ -116,7 +116,7 @@ const EventForm = () => {
 
         // If editing, fetch event data
         if (id) {
-          const eventRes = await axios.get(`http://localhost:8080/api/events/${id}`, { headers });
+          const eventRes = await api.get(`events/${id}`, { headers });
           const event = eventRes.data;
           console.log('Fetched event for editing:', event);
           console.log('Event products:', event.products);
@@ -258,7 +258,7 @@ const EventForm = () => {
           actualOrders: formData.actualOrders ? parseInt(formData.actualOrders) : null,
         };
 
-        await axios.put(`http://localhost:8080/api/events/${id}`, metricsData, {
+        await api.put(`events/${id}`, metricsData, {
           headers: { 
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -273,7 +273,7 @@ const EventForm = () => {
       // First, delete any attachments marked for deletion
       if (attachmentsToDelete.length > 0 && id) {
         console.log('Deleting attachments:', attachmentsToDelete);
-        await axios.delete(`http://localhost:8080/api/events/${id}/attachments`, {
+        await api.delete(`events/${id}/attachments`, {
           headers: { 
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -324,9 +324,9 @@ const EventForm = () => {
         };
 
         if (id) {
-          await axios.put(`http://localhost:8080/api/events/${id}`, formDataToSend, { headers });
+          await api.put(`events/${id}`, formDataToSend, { headers });
         } else {
-          await axios.post('http://localhost:8080/api/events', formDataToSend, { headers });
+          await api.post('events', formDataToSend, { headers });
         }
       } else {
         // Use regular JSON for requests without attachments
@@ -352,9 +352,9 @@ const EventForm = () => {
         };
 
         if (id) {
-          await axios.put(`http://localhost:8080/api/events/${id}`, data, { headers });
+          await api.put(`events/${id}`, data, { headers });
         } else {
-          await axios.post('http://localhost:8080/api/events', data, { headers });
+          await api.post('events', data, { headers });
         }
       }
 

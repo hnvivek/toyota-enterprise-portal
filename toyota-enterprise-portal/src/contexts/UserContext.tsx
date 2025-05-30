@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import axios from 'axios';
+import { api } from '../config/api';
 
 interface User {
   id: number;
@@ -54,7 +54,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
 
       console.log('Fetching current user with token...');
-      const response = await axios.get('http://localhost:8080/api/users/profile', {
+      const response = await api.get('/users/profile', {
         headers: { Authorization: `Bearer ${token}` }
       });
       console.log('User fetched successfully:', response.data);
@@ -90,7 +90,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       interceptorSetup = true;
       
       // Response interceptor to handle auth errors (but not during login)
-      const responseInterceptor = axios.interceptors.response.use(
+      const responseInterceptor = api.interceptors.response.use(
         (response) => response,
         (error) => {
           // Don't auto-logout if this is a login request failing
@@ -109,7 +109,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       // Cleanup interceptor on unmount
       return () => {
-        axios.interceptors.response.eject(responseInterceptor);
+        api.interceptors.response.eject(responseInterceptor);
         interceptorSetup = false;
       };
     }

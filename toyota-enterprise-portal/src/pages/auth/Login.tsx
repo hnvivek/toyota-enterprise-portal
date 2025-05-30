@@ -19,7 +19,7 @@ import {
   Campaign as MarketingIcon,
   TrendingUp as HeadIcon,
 } from '@mui/icons-material';
-import axios from 'axios';
+import { api } from '../../config/api';
 import { AuthContext } from '../../App';
 import { useUser } from '../../contexts/UserContext';
 
@@ -86,7 +86,7 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const response = await axios.post('http://localhost:8080/api/auth/login', formData);
+      const response = await api.post('/auth/login', formData);
       localStorage.setItem('token', response.data.token);
       setIsAuthenticated(true);
       
@@ -112,7 +112,7 @@ const Login = () => {
     });
 
     try {
-      const response = await axios.post('http://localhost:8080/api/auth/login', {
+      const response = await api.post('/auth/login', {
         email: user.email,
         password: user.password,
       });

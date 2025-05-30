@@ -32,10 +32,11 @@ import {
   FilterList as FilterIcon,
   Today as TodayIcon,
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { api } from '../../config/api';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import './EventCalendar.css';
+import { useUser } from '../../contexts/UserContext';
 
 // Configure moment localizer
 const localizer = momentLocalizer(moment);
@@ -109,10 +110,10 @@ const EventCalendar = () => {
       if (selectedStatus !== 'all') params.append('status', selectedStatus);
       
       const [eventsRes, branchesRes] = await Promise.all([
-        axios.get(`http://localhost:8080/api/events?${params.toString()}`, {
+        api.get(`/events?${params.toString()}`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        axios.get('http://localhost:8080/api/branches', {
+        api.get('/branches', {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
@@ -130,7 +131,7 @@ const EventCalendar = () => {
   const fetchCurrentUser = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:8080/api/auth/me', {
+      const response = await api.get('/auth/me', {
         headers: { Authorization: `Bearer ${token}` },
       });
       setCurrentUser({ role: response.data.role });
