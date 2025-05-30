@@ -1,22 +1,30 @@
 import axios from 'axios';
 
-// Detect production environment more reliably
-const isProduction = process.env.NODE_ENV === 'production' || 
-                    process.env.RAILWAY_ENVIRONMENT === 'production' ||
-                    window.location.hostname !== 'localhost';
+// Check if we're running on Railway or localhost
+const isLocalDevelopment = typeof window !== 'undefined' && 
+                          (window.location.hostname === 'localhost' || 
+                           window.location.hostname === '127.0.0.1');
 
-// In production, use relative URL since frontend and backend are served from same domain
-// In development, use explicit localhost URL
-const API_URL = process.env.REACT_APP_API_URL || (
-  isProduction ? '/api' : 'http://localhost:8080/api'
-);
+const isRailwayProduction = typeof window !== 'undefined' && 
+                           window.location.hostname.includes('railway.app');
+
+// API URL configuration - be very explicit
+let API_URL;
+if (process.env.REACT_APP_API_URL) {
+  API_URL = process.env.REACT_APP_API_URL;
+} else if (isRailwayProduction || (!isLocalDevelopment && typeof window !== 'undefined')) {
+  API_URL = '/api'; // Production: same domain
+} else {
+  API_URL = 'http://localhost:8080/api'; // Development
+}
 
 console.log('API Configuration:', {
   NODE_ENV: process.env.NODE_ENV,
-  RAILWAY_ENVIRONMENT: process.env.RAILWAY_ENVIRONMENT,
-  hostname: window.location.hostname,
-  isProduction,
-  API_URL
+  REACT_APP_API_URL: process.env.REACT_APP_API_URL,
+  hostname: typeof window !== 'undefined' ? window.location.hostname : 'server',
+  isLocalDevelopment,
+  isRailwayProduction,
+  finalAPI_URL: API_URL
 });
 
 export const api = axios.create({

@@ -122,42 +122,6 @@ const eventTypes = [
   }
 ];
 
-async function dropAllData() {
-  try {
-    console.log('Dropping all existing data...');
-    
-    // Drop in reverse order of dependencies
-    await AppDataSource.createQueryBuilder()
-      .delete()
-      .from(Event)
-      .execute();
-    console.log('Dropped all events');
-    
-    await AppDataSource.createQueryBuilder()
-      .delete()
-      .from(Product)
-      .execute();
-    console.log('Dropped all products');
-    
-    await AppDataSource.createQueryBuilder()
-      .delete()
-      .from(EventType)
-      .execute();
-    console.log('Dropped all event types');
-    
-    await AppDataSource.createQueryBuilder()
-      .delete()
-      .from(Branch)
-      .execute();
-    console.log('Dropped all branches');
-    
-    console.log('All data dropped successfully');
-  } catch (error) {
-    console.error('Error dropping data:', error);
-    throw error;
-  }
-}
-
 async function seedBranches() {
   const branchRepository = AppDataSource.getRepository(Branch);
   const createdBranches = [];
@@ -378,8 +342,11 @@ export async function seed() {
   try {
     console.log('Starting seed process...');
     
-    // Drop existing data first
-    await dropAllData();
+    // Drop and recreate the database schema
+    console.log('Dropping and recreating database schema...');
+    await AppDataSource.dropDatabase();
+    await AppDataSource.synchronize();
+    console.log('Database schema recreated successfully');
     
     // Create basic data
     const createdBranches = await seedBranches();
