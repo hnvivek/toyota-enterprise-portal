@@ -4,7 +4,7 @@
   "icons": [
     {
       "src": "favicon.png",
-      "sizes": "any",
+      "sizes": "16x16",
       "type": "image/png"
     },
     {
