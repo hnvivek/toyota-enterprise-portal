@@ -5,12 +5,34 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { AppDataSource } from '../config/database';
 import { auth } from '../middleware/auth';
+import { seed } from '../seeds/seed';
 
 const router = Router();
 
 // test route
 router.get('/', (req, res) => {
   res.json({ message: 'Auth routes are working!' });
+});
+
+// Manual seed endpoint (for fixing Railway deployment)
+router.post('/manual-seed', async (req, res) => {
+  try {
+    console.log('Manual seed endpoint called');
+    await seed();
+    res.json({ 
+      message: 'Database seeded successfully!',
+      adminCredentials: {
+        email: 'admin@toyota.com',
+        password: 'admin123'
+      }
+    });
+  } catch (error) {
+    console.error('Manual seed error:', error);
+    res.status(500).json({ 
+      message: 'Error seeding database',
+      error: error instanceof Error ? error.message : String(error)
+    });
+  }
 });
 
 // Register route

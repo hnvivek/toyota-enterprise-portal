@@ -17,10 +17,6 @@ cleanup() {
 # Set up signal handlers for graceful shutdown
 trap cleanup SIGTERM SIGINT
 
-# Try to seed database (non-blocking, allow failure)
-echo "Attempting to seed database..."
-npm run seed || echo "Database seeding skipped (may already be seeded)"
-
-# Start the main application
+# Start the main application directly
 echo "Starting main application..."
 exec npm start 
