@@ -5,12 +5,42 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { AppDataSource } from '../config/database';
 import { auth } from '../middleware/auth';
+import { seed } from '../seeds/seed';
 
 const router = Router();
 
 // test route
 router.get('/', (req, res) => {
   res.json({ message: 'Auth routes are working!' });
+});
+
+// Temporary seed endpoint (remove after initial setup)
+router.post('/seed', async (req, res) => {
+  try {
+    // Security check - only allow in production if JWT_SECRET matches
+    const { secret } = req.body;
+    if (process.env.NODE_ENV === 'production' && secret !== process.env.JWT_SECRET) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+    
+    await seed();
+    res.json({ 
+      message: 'Database seeded successfully!',
+      users: [
+        { role: 'Admin', email: 'admin@toyota.com', password: 'admin123' },
+        { role: 'Sales Manager', email: 'priya.sales@toyota.com', password: 'sales123' },
+        { role: 'General Manager', email: 'rajesh.gm@toyota.com', password: 'gm123' },
+        { role: 'Marketing Manager', email: 'arun.marketing@toyota.com', password: 'marketing123' },
+        { role: 'Marketing Head', email: 'kavya.head@toyota.com', password: 'head123' }
+      ]
+    });
+  } catch (error) {
+    console.error('Seed error:', error);
+    res.status(500).json({ 
+      message: 'Error seeding database',
+      error: error instanceof Error ? error.message : String(error)
+    });
+  }
 });
 
 // Register route
