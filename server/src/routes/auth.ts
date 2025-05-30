@@ -75,20 +75,38 @@ router.post('/register', async (req, res) => {
 // Login route
 router.post('/login', async (req, res) => {
   try {
+    console.log('Login attempt started');
     const userRepository = AppDataSource.getRepository(User);
     const { email, password } = req.body;
 
+    console.log('Login attempt for email:', email);
+
+    // Validate input
+    if (!email || !password) {
+      console.log('Missing email or password');
+      return res.status(400).json({ message: 'Email and password are required' });
+    }
+
     // Find user
+    console.log('Searching for user in database...');
     const user = await userRepository.findOne({ where: { email } });
+    
     if (!user) {
+      console.log('User not found for email:', email);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
+    console.log('User found:', { id: user.id, email: user.email, role: user.role });
+
     // Check password
+    console.log('Verifying password...');
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
+      console.log('Password verification failed for user:', email);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
+
+    console.log('Password verified successfully');
 
     // Generate JWT token
     const token = jwt.sign(
@@ -96,6 +114,8 @@ router.post('/login', async (req, res) => {
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '24h' }
     );
+
+    console.log('JWT token generated successfully');
 
     res.json({
       token,
@@ -106,8 +126,14 @@ router.post('/login', async (req, res) => {
         role: user.role
       }
     });
+
+    console.log('Login successful for user:', email);
   } catch (error) {
-    res.status(500).json({ message: 'Error logging in' });
+    console.error('Login error:', error);
+    res.status(500).json({ 
+      message: 'Error logging in',
+      error: error instanceof Error ? error.message : String(error)
+    });
   }
 });
 

@@ -18,8 +18,25 @@ dotenv.config();
 
 const app = express();
 
-// Middleware
-app.use(cors());
+// Enhanced CORS configuration
+app.use(cors({
+  origin: true, // Allow all origins in production
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  if (req.body && Object.keys(req.body).length > 0) {
+    console.log('Request body:', req.method === 'POST' && req.path.includes('login') 
+      ? { email: req.body.email, password: '***' } 
+      : req.body);
+  }
+  next();
+});
+
 app.use(express.json());
 
 // Serve uploaded files statically
@@ -30,7 +47,8 @@ app.get('/api/health', (req, res) => {
   res.status(200).json({ 
     status: 'healthy', 
     timestamp: new Date().toISOString(),
-    database: AppDataSource.isInitialized ? 'connected' : 'disconnected'
+    database: AppDataSource.isInitialized ? 'connected' : 'disconnected',
+    environment: process.env.NODE_ENV
   });
 });
 

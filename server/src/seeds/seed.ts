@@ -203,6 +203,8 @@ async function seedEventTypes() {
 async function seedUsers(branches: Branch[]): Promise<User | null> {
   const userRepository = AppDataSource.getRepository(User);
   
+  console.log('Starting user seeding process...');
+  
   // Default users for each role with single branch assignments for workflow
   const usersToCreate = [
     {
@@ -238,64 +240,58 @@ async function seedUsers(branches: Branch[]): Promise<User | null> {
       description: 'Marketing Manager - KP Road Branch'
     },
     {
-      username: 'kavya_marketing_head',
+      username: 'kavya_head',
       email: 'kavya.head@toyota.com',
       password: 'head123',
       role: UserRole.MARKETING_HEAD,
-      branch: null, // Marketing head oversees all branches
-      description: 'Regional Marketing Head - All Branches'
+      branch: null, // Marketing Head has access to all branches for campaign oversight
+      description: 'Marketing Head - All Branches Access'
     }
   ];
 
   let adminUser: User | null = null;
 
   for (const userData of usersToCreate) {
-    // Check if user already exists
-    const existingUser = await userRepository.findOne({
-      where: { email: userData.email }
-    });
-    
-    if (existingUser) {
-      console.log(`User ${userData.username} already exists, skipping creation`);
-      if (userData.role === UserRole.ADMIN) {
-        adminUser = existingUser;
+    try {
+      console.log(`Creating user: ${userData.email}`);
+      
+      // Check if user already exists
+      const existingUser = await userRepository.findOne({ where: { email: userData.email } });
+      if (existingUser) {
+        console.log(`User ${userData.email} already exists, skipping...`);
+        if (userData.role === UserRole.ADMIN) {
+          adminUser = existingUser;
+        }
+        continue;
       }
-      continue;
+
+      // Hash password
+      const hashedPassword = await bcrypt.hash(userData.password, 10);
+      console.log(`Password hashed for user: ${userData.email}`);
+
+      // Create user
+      const user = new User();
+      user.username = userData.username;
+      user.email = userData.email;
+      user.password = hashedPassword;
+      user.role = userData.role;
+      if (userData.branch) {
+        user.branch = userData.branch;
+      }
+
+      const savedUser = await userRepository.save(user);
+      console.log(`User created successfully: ${savedUser.email} (ID: ${savedUser.id})`);
+
+      if (userData.role === UserRole.ADMIN) {
+        adminUser = savedUser;
+        console.log('Admin user saved successfully');
+      }
+    } catch (error) {
+      console.error(`Error creating user ${userData.email}:`, error);
     }
-
-    // Hash password
-    const hashedPassword = await bcrypt.hash(userData.password, 10);
-
-    // Create user data
-    const userCreateData: any = {
-      username: userData.username,
-      email: userData.email,
-      password: hashedPassword,
-      role: userData.role
-    };
-
-    // Assign branch and region if specified
-    if (userData.branch) {
-      userCreateData.branch = userData.branch;
-      userCreateData.region = userData.branch.region;
-    }
-
-    const user = userRepository.create(userCreateData);
-    const savedUser: any = await userRepository.save(user);
-    
-    if (userData.role === UserRole.ADMIN) {
-      adminUser = savedUser;
-    }
-    
-    console.log(`Created user: ${userData.username} (${userData.role}) - ${userData.description}`);
   }
-  
-  console.log(`Created users with single branch assignments for workflow:`);
-  console.log(`- Admin: All branches access`);
-  console.log(`- Sales Manager: Whitefield branch only`);
-  console.log(`- General Manager: Whitefield branch only`);
-  console.log(`- Marketing Manager: KP Road branch only`);
-  console.log(`- Marketing Head: All branches oversight`);
+
+  console.log('User seeding completed');
   return adminUser;
 }
 
