@@ -1,0 +1,331 @@
+/* Modern, compact calendar styles for Toyota Enterprise Portal */
+
+.rbc-calendar {
+  font-family: 'Inter', 'Roboto', 'Helvetica', 'Arial', sans-serif !important;
+  background-color: #ffffff;
+  border-radius: 12px;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Compact header styling */
+.rbc-header {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%) !important;
+  color: #1e293b !important;
+  font-weight: 600 !important;
+  padding: 12px 6px !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  font-size: 0.8rem !important;
+  letter-spacing: 0.025em;
+  text-transform: none !important;
+  transition: all 0.2s ease !important;
+}
+
+.rbc-header:hover {
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
+}
+
+/* Modern today highlighting */
+.rbc-today {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
+  border: 1px solid #3b82f6 !important;
+  border-radius: 8px !important;
+}
+
+/* Compact month view dates */
+.rbc-date-cell {
+  padding: 4px !important;
+  min-height: 32px !important;
+}
+
+.rbc-date-cell button {
+  color: #374151 !important;
+  font-weight: 500 !important;
+  font-size: 0.85rem !important;
+  border-radius: 6px !important;
+  padding: 4px 8px !important;
+  transition: all 0.15s ease !important;
+}
+
+.rbc-date-cell button:hover {
+  background-color: #f3f4f6 !important;
+  transform: scale(1.05) !important;
+}
+
+/* Grid improvements */
+.rbc-month-view .rbc-date-cell {
+  border-right: 1px solid #f1f5f9 !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+}
+
+.rbc-month-row {
+  border: none !important;
+}
+
+/* Other month dates styling */
+.rbc-off-range-bg {
+  background-color: #fafbfc !important;
+}
+
+.rbc-off-range .rbc-date-cell button {
+  color: #9ca3af !important;
+  opacity: 0.6 !important;
+}
+
+/* Modern event styling */
+.rbc-event {
+  border-radius: 6px !important;
+  border: none !important;
+  padding: 2px 6px !important;
+  font-size: 0.7rem !important;
+  font-weight: 600 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06) !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  margin: 1px 0 !important;
+  min-height: 18px !important;
+}
+
+.rbc-event:hover {
+  transform: translateY(-1px) scale(1.02) !important;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06) !important;
+  z-index: 10 !important;
+}
+
+/* Week and day view enhancements */
+.rbc-time-slot {
+  border-top: 1px solid #f8fafc !important;
+  min-height: 20px !important;
+}
+
+.rbc-time-header-gutter {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+.rbc-time-header {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+.rbc-time-header .rbc-header {
+  border-bottom: none !important;
+  padding: 8px 4px !important;
+}
+
+/* Current time indicator */
+.rbc-current-time-indicator {
+  background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%) !important;
+  height: 2px !important;
+  box-shadow: 0 0 4px rgba(239, 68, 68, 0.4) !important;
+}
+
+/* Selection styling */
+.rbc-selected {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.1) 100%) !important;
+  border: 2px solid #3b82f6 !important;
+  border-radius: 8px !important;
+}
+
+/* Time gutter compact styling */
+.rbc-time-gutter .rbc-time-slot {
+  font-size: 0.7rem !important;
+  color: #6b7280 !important;
+  text-align: right !important;
+  padding-right: 8px !important;
+  font-weight: 500 !important;
+}
+
+/* All day events area */
+.rbc-allday-cell {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  font-weight: 600 !important;
+  font-size: 0.75rem !important;
+  color: #475569 !important;
+  padding: 6px 8px !important;
+  min-height: 32px !important;
+}
+
+/* Week view day headers */
+.rbc-time-header-content {
+  border-left: 1px solid #f1f5f9 !important;
+}
+
+/* Event content improvements */
+.rbc-event-content {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  line-height: 1.2 !important;
+}
+
+/* Hide default toolbar */
+.rbc-toolbar {
+  display: none !important;
+}
+
+/* Scrollable time view */
+.rbc-time-view {
+  border: 1px solid #f1f5f9 !important;
+  border-radius: 8px !important;
+}
+
+.rbc-time-content {
+  border-top: none !important;
+}
+
+/* Day background colors */
+.rbc-day-bg {
+  transition: background-color 0.15s ease !important;
+}
+
+.rbc-day-bg:hover {
+  background-color: rgba(248, 250, 252, 0.8) !important;
+}
+
+/* Month view improvements */
+.rbc-month-view {
+  border: 1px solid #f1f5f9 !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+}
+
+/* Week view improvements */
+.rbc-time-view .rbc-header {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
+  border-bottom: 2px solid #e2e8f0 !important;
+  font-size: 0.8rem !important;
+  padding: 10px 6px !important;
+}
+
+/* Enhanced responsive design */
+@media (max-width: 768px) {
+  .rbc-calendar {
+    font-size: 0.75rem !important;
+  }
+  
+  .rbc-header {
+    padding: 8px 3px !important;
+    font-size: 0.7rem !important;
+  }
+  
+  .rbc-event {
+    font-size: 0.65rem !important;
+    padding: 1px 4px !important;
+    min-height: 16px !important;
+  }
+  
+  .rbc-date-cell {
+    padding: 2px !important;
+    min-height: 28px !important;
+  }
+  
+  .rbc-date-cell button {
+    font-size: 0.75rem !important;
+    padding: 2px 4px !important;
+  }
+  
+  .rbc-time-gutter .rbc-time-slot {
+    font-size: 0.65rem !important;
+  }
+  
+  .rbc-allday-cell {
+    padding: 4px 6px !important;
+    min-height: 28px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .rbc-calendar {
+    font-size: 0.7rem !important;
+  }
+  
+  .rbc-event {
+    font-size: 0.6rem !important;
+    padding: 1px 3px !important;
+    min-height: 14px !important;
+  }
+  
+  .rbc-header {
+    padding: 6px 2px !important;
+    font-size: 0.65rem !important;
+  }
+}
+
+/* Loading state */
+.calendar-loading {
+  opacity: 0.7;
+  pointer-events: none;
+  filter: blur(0.5px);
+  transition: all 0.3s ease;
+}
+
+/* Modern accessibility improvements */
+.rbc-calendar:focus-within {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+  border-radius: 14px;
+}
+
+.rbc-event:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 1px;
+  border-radius: 8px;
+}
+
+/* Smooth transitions for all interactive elements */
+.rbc-calendar * {
+  transition: all 0.15s ease !important;
+}
+
+/* Enhanced popup for small events */
+.rbc-overlay {
+  border-radius: 8px !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1), 0 4px 10px rgba(0, 0, 0, 0.05) !important;
+  border: 1px solid #e2e8f0 !important;
+  background: #ffffff !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+.rbc-overlay-header {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  padding: 8px 12px !important;
+  font-weight: 600 !important;
+  font-size: 0.85rem !important;
+}
+
+/* Improved event density for month view */
+.rbc-row-content {
+  z-index: 4 !important;
+}
+
+.rbc-row-segment {
+  padding: 0 1px !important;
+}
+
+/* Better spacing for overlapping events */
+.rbc-event-overlaps {
+  margin-left: 1px !important;
+  margin-right: 1px !important;
+}
+
+/* Modern scrollbar styling */
+.rbc-time-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.rbc-time-content::-webkit-scrollbar-track {
+  background: #f8fafc;
+  border-radius: 3px;
+}
+
+.rbc-time-content::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+  transition: background 0.2s ease;
+}
+
+.rbc-time-content::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+} 
