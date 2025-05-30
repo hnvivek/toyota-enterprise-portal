@@ -108,9 +108,9 @@ const getTrendIcon = (actual: number, planned: number, isReversed: boolean = fal
   const percentage = (actual / planned) * 100;
   const isGood = isReversed ? percentage <= 100 : percentage >= 90;
   
-  if (percentage > planned) {
+  if (percentage > 100) {
     return <TrendingUpIcon sx={{ color: isGood ? '#4caf50' : '#f44336' }} />;
-  } else if (percentage < planned) {
+  } else if (percentage < 100) {
     return <TrendingDownIcon sx={{ color: isGood ? '#4caf50' : '#f44336' }} />;
   }
   return <TrendingFlatIcon sx={{ color: '#ff9800' }} />;
