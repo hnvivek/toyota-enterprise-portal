@@ -1,0 +1,28 @@
+{
+  "name": "toyota-enterprise-portal-deployment",
+  "version": "1.0.0",
+  "description": "Toyota Enterprise Portal - Full Stack Application",
+  "main": "dist/index.js",
+  "scripts": {
+    "start": "cd server && npm start",
+    "build": "echo 'Build completed during Docker build process'",
+    "seed": "cd server && npm run seed"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "keywords": [
+    "toyota",
+    "enterprise",
+    "portal",
+    "react",
+    "express",
+    "postgresql"
+  ],
+  "author": "Toyota Team",
+  "license": "MIT"
+} 

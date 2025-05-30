@@ -1,0 +1,142 @@
+import { Router } from 'express';
+import { User } from '../models/User';
+import { UserRole } from '../types/auth';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { AppDataSource } from '../config/database';
+import { auth } from '../middleware/auth';
+
+const router = Router();
+
+// test route
+router.get('/', (req, res) => {
+  res.json({ message: 'Auth routes are working!' });
+});
+
+// Register route
+router.post('/register', async (req, res) => {
+  try {
+    const userRepository = AppDataSource.getRepository(User);
+    const { username, email, password, role = UserRole.USER } = req.body;
+
+    // Validate input
+    if (!username || !email || !password) {
+      return res.status(400).json({ message: 'Username, email and password are required' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters long' });
+    }
+
+    // Check if user already exists
+    const existingUser = await userRepository.findOne({ where: { email } });
+    if (existingUser) {
+      return res.status(400).json({ message: 'User with this email already exists' });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create user
+    const user = userRepository.create({
+      username,
+      email,
+      password: hashedPassword,
+      role
+    });
+
+    const savedUser = await userRepository.save(user);
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { userId: savedUser.id, role: savedUser.role },
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: '24h' }
+    );
+
+    res.status(201).json({
+      token,
+      user: {
+        id: savedUser.id,
+        username: savedUser.username,
+        email: savedUser.email,
+        role: savedUser.role
+      }
+    });
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({ 
+      message: 'Error creating user',
+      error: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
+// Login route
+router.post('/login', async (req, res) => {
+  try {
+    const userRepository = AppDataSource.getRepository(User);
+    const { email, password } = req.body;
+
+    // Find user
+    const user = await userRepository.findOne({ where: { email } });
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    // Check password
+    const isValidPassword = await bcrypt.compare(password, user.password);
+    if (!isValidPassword) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { userId: user.id, role: user.role },
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: '24h' }
+    );
+
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error logging in' });
+  }
+});
+
+// Get current user info
+router.get('/me', auth, async (req, res) => {
+  try {
+    const userRepository = AppDataSource.getRepository(User);
+    const userId = (req as any).user.userId;
+    
+    const user = await userRepository.findOne({
+      where: { id: userId },
+      relations: ['branch']
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json({
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      branch: user.branch
+    });
+  } catch (error) {
+    console.error('Error fetching user info:', error);
+    res.status(500).json({ message: 'Error fetching user information' });
+  }
+});
+
+export default router;
