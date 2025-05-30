@@ -17,7 +17,7 @@ router.get('/', (req, res) => {
 router.post('/register', async (req, res) => {
   try {
     const userRepository = AppDataSource.getRepository(User);
-    const { username, email, password, role = UserRole.USER } = req.body;
+    const { username, email, password, role = UserRole.SALES_MANAGER } = req.body;
 
     // Validate input
     if (!username || !email || !password) {

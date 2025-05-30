@@ -56,13 +56,13 @@ const Users = () => {
     username: '',
     email: '',
     password: '',
-    role: 'user',
+    role: 'sales_manager',
     branchId: ''
   });
   const [editFormData, setEditFormData] = useState({
     username: '',
     email: '',
-    role: 'user',
+    role: 'sales_manager',
     branchId: ''
   });
   const [error, setError] = useState('');
@@ -124,7 +124,7 @@ const Users = () => {
       
       setUsers([response.data.user, ...users]);
       setCreateDialogOpen(false);
-      setFormData({ username: '', email: '', password: '', role: 'user', branchId: '' });
+      setFormData({ username: '', email: '', password: '', role: 'sales_manager', branchId: '' });
       setSuccess('User created successfully');
       
       // Clear success message after 3 seconds
@@ -177,7 +177,7 @@ const Users = () => {
       
       setEditDialogOpen(false);
       setEditingUser(null);
-      setEditFormData({ username: '', email: '', role: 'user', branchId: '' });
+      setEditFormData({ username: '', email: '', role: 'sales_manager', branchId: '' });
       setSuccess('User updated successfully');
       
       // Clear success message after 3 seconds
@@ -210,14 +210,14 @@ const Users = () => {
 
   const handleCloseCreateDialog = () => {
     setCreateDialogOpen(false);
-    setFormData({ username: '', email: '', password: '', role: 'user', branchId: '' });
+    setFormData({ username: '', email: '', password: '', role: 'sales_manager', branchId: '' });
     setError('');
   };
 
   const handleCloseEditDialog = () => {
     setEditDialogOpen(false);
     setEditingUser(null);
-    setEditFormData({ username: '', email: '', role: 'user', branchId: '' });
+    setEditFormData({ username: '', email: '', role: 'sales_manager', branchId: '' });
     setError('');
   };
 
@@ -227,9 +227,7 @@ const Users = () => {
       'sales_manager': 'primary',
       'general_manager': 'warning',
       'marketing_head': 'success',
-      'marketing_manager': 'info',
-      'manager': 'warning',
-      'user': 'secondary'
+      'marketing_manager': 'info'
     };
     return colors[role.toLowerCase()] || 'secondary';
   };
@@ -450,12 +448,10 @@ const Users = () => {
             onChange={(e) => setFormData({ ...formData, role: e.target.value })}
             sx={{ mb: 2 }}
           >
-            <MenuItem value="user">User</MenuItem>
             <MenuItem value="sales_manager">Sales Manager</MenuItem>
             <MenuItem value="general_manager">General Manager</MenuItem>
-            <MenuItem value="marketing_head">Marketing Head</MenuItem>
             <MenuItem value="marketing_manager">Marketing Manager</MenuItem>
-            <MenuItem value="manager">Manager</MenuItem>
+            <MenuItem value="marketing_head">Marketing Head</MenuItem>
             <MenuItem value="admin">Admin</MenuItem>
           </TextField>
           
@@ -544,12 +540,10 @@ const Users = () => {
             onChange={(e) => setEditFormData({ ...editFormData, role: e.target.value })}
             sx={{ mb: 2 }}
           >
-            <MenuItem value="user">User</MenuItem>
             <MenuItem value="sales_manager">Sales Manager</MenuItem>
             <MenuItem value="general_manager">General Manager</MenuItem>
-            <MenuItem value="marketing_head">Marketing Head</MenuItem>
             <MenuItem value="marketing_manager">Marketing Manager</MenuItem>
-            <MenuItem value="manager">Manager</MenuItem>
+            <MenuItem value="marketing_head">Marketing Head</MenuItem>
             <MenuItem value="admin">Admin</MenuItem>
           </TextField>
           
