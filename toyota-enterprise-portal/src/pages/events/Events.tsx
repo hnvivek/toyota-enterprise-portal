@@ -70,6 +70,9 @@ import 'primereact/resources/themes/lara-light-indigo/theme.css';
 import 'primereact/resources/primereact.min.css';
 import 'primeicons/primeicons.css';
 
+// Add PrimeReact configuration
+import { PrimeReactProvider } from 'primereact/api';
+
 import { 
   eventService, 
   EventFilters, 
@@ -302,13 +305,15 @@ const Events = () => {
   // PrimeReact DataTable state
   const [globalFilterValue, setGlobalFilterValue] = useState('');
   const [filters, setFilters] = useState<any>({
-    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    global: { value: '', matchMode: FilterMatchMode.CONTAINS },
     title: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
     'branch.name': { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.IN }] },
     status: { operator: FilterOperator.OR, constraints: [{ value: null, matchMode: FilterMatchMode.EQUALS }] },
     'eventType.name': { value: null, matchMode: FilterMatchMode.IN },
     startDate: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }] },
     budget: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.GREATER_THAN_OR_EQUAL_TO }] },
+    actualEnquiries: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.GREATER_THAN_OR_EQUAL_TO }] },
+    actualOrders: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.GREATER_THAN_OR_EQUAL_TO }] },
   });
   
   // Column visibility state - Optimized for better space utilization
@@ -321,6 +326,8 @@ const Events = () => {
     budget: false,      // Secondary - Financial info
     eventType: false,   // Secondary - Category info
     products: false,    // Secondary - Product details
+    enquiriesMetrics: true,  // Important - Planned vs Actual enquiries
+    ordersMetrics: true,     // Important - Planned vs Actual orders
   });
   
   // Column toggle menu state
@@ -547,73 +554,336 @@ const Events = () => {
 
   const initFilters = () => {
     setFilters({
-      global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+      global: { value: '', matchMode: FilterMatchMode.CONTAINS },
       title: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
       'branch.name': { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.IN }] },
       status: { operator: FilterOperator.OR, constraints: [{ value: null, matchMode: FilterMatchMode.EQUALS }] },
       'eventType.name': { value: null, matchMode: FilterMatchMode.IN },
       startDate: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }] },
       budget: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.GREATER_THAN_OR_EQUAL_TO }] },
+      actualEnquiries: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.GREATER_THAN_OR_EQUAL_TO }] },
+      actualOrders: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.GREATER_THAN_OR_EQUAL_TO }] },
     } as any);
   };
 
-  // Export functions
+  // Helper function to get filtered data from DataTable
+  const getFilteredData = () => {
+    // Use the filtered events state if available and not empty
+    if (filteredEvents.length > 0) {
+      return filteredEvents;
+    }
+    
+    // Fallback to all events if no filtering has been applied
+    return events;
+  };
+
+  // Export functions with proper column names and filtered data
   const exportCSV = () => {
+    // Use PrimeReact's built-in CSV export
     dt.current?.exportCSV();
+    
+    // Show success message
+    const filteredData = getFilteredData();
+    toast.current?.show({ 
+      severity: 'success', 
+      summary: 'CSV Export Complete', 
+      detail: `${filteredData.length} events exported to CSV` 
+    });
   };
 
   const exportPdf = () => {
-    import('jspdf').then((jsPDF) => {
-      import('jspdf-autotable').then(() => {
-        const doc = new jsPDF.default('l', 'mm', 'a4');
-        const cols = [
-          { title: 'Title', dataKey: 'title' },
-          { title: 'Branch', dataKey: 'branch' },
-          { title: 'Status', dataKey: 'status' },
-          { title: 'Start Date', dataKey: 'startDate' },
-          { title: 'Budget', dataKey: 'budget' }
-        ];
-        const rows = events.map(event => ({
-          title: event.title,
-          branch: event.branch.name,
-          status: event.status,
-          startDate: new Date(event.startDate).toLocaleDateString(),
-          budget: formatINR(event.budget)
-        }));
+    import('jspdf').then((jsPDFModule) => {
+      import('jspdf-autotable').then((autoTableModule) => {
+        const jsPDF = jsPDFModule.default;
         
-        (doc as any).autoTable({
-          columns: cols,
-          body: rows,
-          startY: 30,
-          head: [['Title', 'Branch', 'Status', 'Start Date', 'Budget']],
-          styles: { fontSize: 8 },
-          headStyles: { fillColor: [71, 85, 105] }
+        // Create document in landscape mode for better table fit
+        const doc = new jsPDF({
+          orientation: 'landscape',
+          unit: 'mm',
+          format: 'a4'
         });
         
-        doc.save('events.pdf');
+        // Get filtered data
+        const filteredData = getFilteredData();
+        console.log('PDF Export - Starting with data count:', filteredData.length);
+        
+        // Add header with clean styling
+        doc.setFillColor(220, 38, 38); // Toyota red
+        doc.rect(0, 0, 297, 30, 'F');
+        
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(20);
+        doc.setFont('helvetica', 'bold');
+        doc.text('TOYOTA - Events Performance Report', 15, 20);
+        
+        // Reset colors and add report info
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Report Summary', 15, 45);
+        
+        // Calculate totals first
+        const totalBudget = filteredData.reduce((sum, event) => {
+          const budget = Number(event.budget) || 0;
+          return sum + budget;
+        }, 0);
+        const totalPlannedEnq = filteredData.reduce((sum, event) => sum + (event.plannedEnquiries || 0), 0);
+        const totalActualEnq = filteredData.reduce((sum, event) => sum + (event.actualEnquiries || 0), 0);
+        const totalPlannedOrd = filteredData.reduce((sum, event) => sum + (event.plannedOrders || 0), 0);
+        const totalActualOrd = filteredData.reduce((sum, event) => sum + (event.actualOrders || 0), 0);
+        
+        // Format budget display cleanly
+        const budgetFormatted = totalBudget > 0 ? 
+          `Rs. ${totalBudget.toLocaleString('en-IN')}` : 'Rs. 0';
+        
+        // SECTION 1: Basic Information
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Generated: ${new Date().toLocaleString()}`, 15, 55);
+        doc.text(`Total Events: ${filteredData.length}`, 15, 62);
+        doc.text(`Total Budget: ${budgetFormatted}`, 15, 69);
+        
+        // SECTION 2: Performance Metrics (with visual separation)
+        // Add a subtle line separator
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.5);
+        doc.line(140, 52, 140, 76);
+        
+        // Performance calculations
+        const enquiryPerformance = totalPlannedEnq > 0 ? 
+          Math.round((totalActualEnq / totalPlannedEnq) * 100) : 0;
+        const orderPerformance = totalPlannedOrd > 0 ? 
+          Math.round((totalActualOrd / totalPlannedOrd) * 100) : 0;
+        
+        // Enquiries section
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.text('ENQUIRIES', 150, 55);
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.text(`Planned: ${totalPlannedEnq.toLocaleString()}`, 150, 62);
+        doc.text(`Actual: ${totalActualEnq.toLocaleString()} (${enquiryPerformance}%)`, 150, 68);
+        
+        // Orders section  
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.text('ORDERS', 220, 55);
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.text(`Planned: ${totalPlannedOrd.toLocaleString()}`, 220, 62);
+        doc.text(`Actual: ${totalActualOrd.toLocaleString()} (${orderPerformance}%)`, 220, 68);
+        
+        // Prepare table data with clean formatting
+        const tableHeaders = [
+          'S.No', 'Event Title', 'Branch', 'Status', 'Start Date', 'End Date', 
+          'Location', 'Budget', 'Event Type', 'Plan Enq', 'Act Enq', 'Plan Ord', 'Act Ord'
+        ];
+        
+        const tableData = filteredData.map((event: Event, index: number) => [
+          (index + 1).toString(),
+          event.title || '',
+          event.branch?.name || '',
+          event.status || '',
+          new Date(event.startDate).toLocaleDateString() || '',
+          new Date(event.endDate).toLocaleDateString() || '',
+          event.location || '',
+          formatINR(event.budget || 0).replace('₹', 'Rs.'),
+          (event.eventType?.name || 'N/A').substring(0, 15), // Truncate long event type names
+          (event.plannedEnquiries || 0).toString(),
+          (event.actualEnquiries || 0).toString(),
+          (event.plannedOrders || 0).toString(),
+          (event.actualOrders || 0).toString()
+        ]);
+        
+        console.log('Table Headers:', tableHeaders);
+        console.log('Table Data Sample:', tableData[0]);
+        console.log('autoTable available:', typeof (doc as any).autoTable);
+        
+        // Create the table using autoTable
+        try {
+          if (typeof (doc as any).autoTable === 'function') {
+            console.log('Using autoTable for PDF generation');
+            
+            (doc as any).autoTable({
+              head: [tableHeaders],
+              body: tableData,
+              startY: 88,
+              margin: { left: 8, right: 8 },
+              styles: {
+                fontSize: 7,
+                cellPadding: 2,
+                lineColor: [128, 128, 128],
+                lineWidth: 0.1,
+                textColor: [0, 0, 0],
+                font: 'helvetica',
+                overflow: 'linebreak'
+              },
+              headStyles: {
+                fillColor: [52, 73, 93],
+                textColor: [255, 255, 255],
+                fontSize: 8,
+                fontStyle: 'bold',
+                halign: 'center'
+              },
+              columnStyles: {
+                0: { cellWidth: 12, halign: 'center' }, // S.No
+                1: { cellWidth: 38 }, // Event Title - increased width
+                2: { cellWidth: 18 }, // Branch
+                3: { cellWidth: 18, halign: 'center' }, // Status
+                4: { cellWidth: 18, halign: 'center' }, // Start Date
+                5: { cellWidth: 18, halign: 'center' }, // End Date
+                6: { cellWidth: 22 }, // Location
+                7: { cellWidth: 20, halign: 'right' }, // Budget
+                8: { cellWidth: 25 }, // Event Type - increased width
+                9: { cellWidth: 14, halign: 'center' }, // Plan Enq
+                10: { cellWidth: 14, halign: 'center' }, // Act Enq
+                11: { cellWidth: 14, halign: 'center' }, // Plan Ord
+                12: { cellWidth: 14, halign: 'center' } // Act Ord
+              },
+              alternateRowStyles: {
+                fillColor: [245, 245, 245]
+              },
+              tableLineColor: [128, 128, 128],
+              tableLineWidth: 0.1,
+              theme: 'grid',
+              didDrawPage: function(data: any) {
+                // Footer
+                doc.setFontSize(8);
+                doc.setTextColor(128, 128, 128);
+                doc.text('Generated by Toyota Enterprise Portal', 15, doc.internal.pageSize.height - 10);
+                doc.text(`Page ${data.pageNumber}`, doc.internal.pageSize.width - 30, doc.internal.pageSize.height - 10);
+              }
+            });
+            
+            console.log('autoTable completed successfully');
+            
+          } else {
+            throw new Error('autoTable function not available');
+          }
+        } catch (error) {
+          console.error('autoTable failed, using manual table creation:', error);
+          
+          // Manual table creation as fallback with adjusted widths
+          let currentY = 90;
+          const rowHeight = 6;
+          const colWidths = [12, 38, 18, 18, 18, 18, 22, 20, 25, 14, 14, 14, 14]; // Adjusted widths
+          let currentX = 8;
+          
+          // Draw headers
+          doc.setFillColor(52, 73, 93);
+          doc.rect(currentX, currentY, colWidths.reduce((a, b) => a + b, 0), rowHeight, 'F');
+          
+          doc.setTextColor(255, 255, 255);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(8);
+          
+          tableHeaders.forEach((header, i) => {
+            doc.text(header, currentX + colWidths[i]/2, currentY + 4, { align: 'center' });
+            currentX += colWidths[i];
+          });
+          
+          currentY += rowHeight;
+          
+          // Draw data rows
+          doc.setTextColor(0, 0, 0);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(7);
+          
+          tableData.forEach((row, rowIndex) => {
+            currentX = 8;
+            
+            // Alternate row colors
+            if (rowIndex % 2 === 1) {
+              doc.setFillColor(245, 245, 245);
+              doc.rect(currentX, currentY, colWidths.reduce((a, b) => a + b, 0), rowHeight, 'F');
+            }
+            
+            row.forEach((cell, colIndex) => {
+              const maxLength = colIndex === 1 ? 25 : colIndex === 8 ? 15 : 20; // Different limits for different columns
+              const text = cell.toString().substring(0, maxLength);
+              const align = [0, 3, 4, 5, 7, 9, 10, 11, 12].includes(colIndex) ? 'center' : 'left';
+              const x = align === 'center' ? currentX + colWidths[colIndex]/2 : currentX + 2;
+              
+              doc.text(text, x, currentY + 4, { align: align as any });
+              currentX += colWidths[colIndex];
+            });
+            
+            currentY += rowHeight;
+            
+            // Add new page if needed
+            if (currentY > 180) {
+              doc.addPage();
+              currentY = 20;
+            }
+          });
+        }
+        
+        // Save the PDF
+        const fileName = `toyota_events_${new Date().toISOString().split('T')[0]}.pdf`;
+        doc.save(fileName);
+        
+        toast.current?.show({
+          severity: 'success',
+          summary: 'PDF Generated',
+          detail: `Report with ${filteredData.length} events saved as ${fileName}`
+        });
+        
+      }).catch((autoTableError) => {
+        console.error('Failed to load jspdf-autotable:', autoTableError);
+        toast.current?.show({
+          severity: 'error',
+          summary: 'PDF Library Error',
+          detail: 'Could not load PDF table library'
+        });
+      });
+    }).catch((jsPDFError) => {
+      console.error('Failed to load jsPDF:', jsPDFError);
+      toast.current?.show({
+        severity: 'error',
+        summary: 'PDF Export Failed',
+        detail: 'Could not load PDF library'
       });
     });
   };
 
   const exportExcel = () => {
     import('xlsx').then((xlsx) => {
+      // Get filtered data from DataTable - use helper function
+      const filteredData = getFilteredData();
+      
+      // Create worksheet with proper column names
       const worksheet = xlsx.utils.json_to_sheet(
-        events.map(event => ({
-          Title: event.title,
-          Description: event.description,
-          Branch: event.branch.name,
-          Location: event.location,
-          Status: event.status,
+        filteredData.map((event: Event) => ({
+          'Title': event.title,
+          'Description': event.description,
+          'Branch': event.branch.name,
+          'Location': event.location,
+          'Status': event.status,
           'Start Date': new Date(event.startDate).toLocaleDateString(),
           'End Date': new Date(event.endDate).toLocaleDateString(),
-          Budget: event.budget,
+          'Budget': event.budget,
           'Event Type': event.eventType?.name || 'No Type',
-          Products: event.products?.map((p: any) => p.name).join(', ') || ''
+          'Products': event.products?.map((p: any) => p.name).join(', ') || 'None',
+          'Planned Enquiries': event.plannedEnquiries || 0,
+          'Actual Enquiries': event.actualEnquiries || 0,
+          'Enquiries Achievement %': event.plannedEnquiries > 0 ? Math.round(((event.actualEnquiries || 0) / event.plannedEnquiries) * 100) : 0,
+          'Planned Orders': event.plannedOrders || 0,
+          'Actual Orders': event.actualOrders || 0,
+          'Orders Achievement %': event.plannedOrders > 0 ? Math.round(((event.actualOrders || 0) / event.plannedOrders) * 100) : 0
         }))
       );
+      
       const workbook = xlsx.utils.book_new();
       xlsx.utils.book_append_sheet(workbook, worksheet, 'Events');
-      xlsx.writeFile(workbook, 'events.xlsx');
+      xlsx.writeFile(workbook, `events_${new Date().toISOString().split('T')[0]}.xlsx`);
+      
+      toast.current?.show({ 
+        severity: 'success', 
+        summary: 'Excel Export Complete', 
+        detail: `${filteredData.length} events exported to Excel` 
+      });
     });
   };
 
@@ -790,6 +1060,82 @@ const Events = () => {
     </Box>
   );
 
+  // Planned vs Actual Enquiries Template
+  const enquiriesMetricsTemplate = (rowData: Event) => {
+    const planned = rowData.plannedEnquiries || 0;
+    const actual = rowData.actualEnquiries || 0;
+    const percentage = planned > 0 ? Math.round((actual / planned) * 100) : 0;
+    const isOverAchieving = actual > planned;
+    const isUnderAchieving = actual < planned && planned > 0;
+    
+    return (
+      <Box sx={{ py: 0.25 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.125 }}>
+          <Typography variant="body2" fontWeight="600" sx={{ fontSize: '0.75rem', lineHeight: 1.1 }}>
+            {actual}
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
+            / {planned}
+          </Typography>
+          {planned > 0 && (
+            <Typography 
+              variant="caption" 
+              sx={{ 
+                fontSize: '0.6rem',
+                fontWeight: 600,
+                color: isOverAchieving ? 'success.main' : isUnderAchieving ? 'error.main' : 'text.secondary',
+                ml: 0.25
+              }}
+            >
+              ({percentage}%)
+            </Typography>
+          )}
+        </Box>
+        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem', lineHeight: 1 }}>
+          🎯 Enquiries
+        </Typography>
+      </Box>
+    );
+  };
+
+  // Planned vs Actual Orders Template
+  const ordersMetricsTemplate = (rowData: Event) => {
+    const planned = rowData.plannedOrders || 0;
+    const actual = rowData.actualOrders || 0;
+    const percentage = planned > 0 ? Math.round((actual / planned) * 100) : 0;
+    const isOverAchieving = actual > planned;
+    const isUnderAchieving = actual < planned && planned > 0;
+    
+    return (
+      <Box sx={{ py: 0.25 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.125 }}>
+          <Typography variant="body2" fontWeight="600" sx={{ fontSize: '0.75rem', lineHeight: 1.1 }}>
+            {actual}
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
+            / {planned}
+          </Typography>
+          {planned > 0 && (
+            <Typography 
+              variant="caption" 
+              sx={{ 
+                fontSize: '0.6rem',
+                fontWeight: 600,
+                color: isOverAchieving ? 'success.main' : isUnderAchieving ? 'error.main' : 'text.secondary',
+                ml: 0.25
+              }}
+            >
+              ({percentage}%)
+            </Typography>
+          )}
+        </Box>
+        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem', lineHeight: 1 }}>
+          🛒 Orders
+        </Typography>
+      </Box>
+    );
+  };
+
   // Filter templates
   const statusFilterTemplate = (options: any) => {
     const statusOptions = [
@@ -804,7 +1150,7 @@ const Events = () => {
 
     return (
       <MultiSelect
-        value={options.value}
+        value={options.value || []}
         options={statusOptions}
         onChange={(e) => options.filterCallback(e.value)}
         optionLabel="label"
@@ -823,7 +1169,7 @@ const Events = () => {
 
     return (
       <MultiSelect
-        value={options.value}
+        value={options.value || []}
         options={branchOptions}
         onChange={(e) => options.filterCallback(e.value)}
         optionLabel="label"
@@ -842,13 +1188,41 @@ const Events = () => {
 
     return (
       <MultiSelect
-        value={options.value}
+        value={options.value || []}
         options={eventTypeOptions}
         onChange={(e) => options.filterCallback(e.value)}
         optionLabel="label"
         placeholder="Select Event Types"
         className="p-column-filter"
         style={{ minWidth: '12rem' }}
+      />
+    );
+  };
+
+  // Enquiries filter template
+  const enquiriesFilterTemplate = (options: any) => {
+    return (
+      <InputText
+        value={options.value}
+        onChange={(e) => options.filterCallback(e.target.value)}
+        placeholder="Min enquiries"
+        className="p-column-filter"
+        style={{ minWidth: '8rem' }}
+        type="number"
+      />
+    );
+  };
+
+  // Orders filter template
+  const ordersFilterTemplate = (options: any) => {
+    return (
+      <InputText
+        value={options.value}
+        onChange={(e) => options.filterCallback(e.target.value)}
+        placeholder="Min orders"
+        className="p-column-filter"
+        style={{ minWidth: '8rem' }}
+        type="number"
       />
     );
   };
@@ -982,277 +1356,387 @@ const Events = () => {
   }
 
   return (
-    <Box sx={{ 
-      p: 2, 
-      backgroundColor: 'background.default', 
-      minHeight: '100vh'
-    }}>
-      <Toast ref={toast} />
-      <ConfirmDialog />
-      <ColumnToggleMenu />
-      
-      {/* Header */}
+    <PrimeReactProvider>
       <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        mb: 2,
-        backgroundColor: 'background.paper',
-        p: 1.5,
-        borderRadius: 2,
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+        p: 2, 
+        backgroundColor: 'background.default', 
+        minHeight: '100vh'
       }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <EventIcon color="primary" sx={{ fontSize: 32 }} />
-          <Typography variant="h4" fontWeight={700} color="text.primary">
-            Events Management
-          </Typography>
-        </Box>
-        <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
-          {/* Debug Buttons - Only for Admin */}
-          {currentUser?.role === 'admin' && (
-            <>
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={async () => {
-                  try {
-                    const token = localStorage.getItem('token');
-                    const response = await api.get('/stats/debug/badge-breakdown', {
-                      headers: { Authorization: `Bearer ${token}` }
-                    });
-                    const data = response.data;
-                    toast.current?.show({
-                      severity: 'info',
-                      summary: 'Badge Breakdown',
-                      detail: `Your Badge Count: ${data.badgeTotal}`,
-                      life: 5000
-                    });
-                  } catch (error) {
-                    console.error('Debug error:', error);
-                  }
-                }}
-                sx={{ fontSize: '0.75rem' }}
-              >
-                🔍 Debug Badge Count
-              </Button>
+        <Toast ref={toast} />
+        <ConfirmDialog />
+        <ColumnToggleMenu />
+        
+        {/* Header */}
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          mb: 2,
+          backgroundColor: 'background.paper',
+          p: 1.5,
+          borderRadius: 2,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <EventIcon color="primary" sx={{ fontSize: 32 }} />
+            <Typography variant="h4" fontWeight={700} color="text.primary">
+              Events Management
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+            {/* Debug Buttons - Only for Admin */}
+            {currentUser?.role === 'admin' && (
+              <>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={async () => {
+                    try {
+                      const token = localStorage.getItem('token');
+                      const response = await api.get('/stats/debug/badge-breakdown', {
+                        headers: { Authorization: `Bearer ${token}` }
+                      });
+                      const data = response.data;
+                      toast.current?.show({
+                        severity: 'info',
+                        summary: 'Badge Breakdown',
+                        detail: `Your Badge Count: ${data.badgeTotal}`,
+                        life: 5000
+                      });
+                    } catch (error) {
+                      console.error('Debug error:', error);
+                    }
+                  }}
+                  sx={{ fontSize: '0.75rem' }}
+                >
+                  🔍 Debug Badge Count
+                </Button>
 
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={async () => {
-                  try {
-                    const token = localStorage.getItem('token');
-                    const response = await api.post('/events/demo/create-new-event', {}, {
-                      headers: { Authorization: `Bearer ${token}` }
-                    });
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={async () => {
+                    try {
+                      const token = localStorage.getItem('token');
+                      const response = await api.post('/events/demo/create-new-event', {}, {
+                        headers: { Authorization: `Bearer ${token}` }
+                      });
+                      toast.current?.show({
+                        severity: 'success',
+                        summary: 'Demo Event Created',
+                        detail: response.data.message,
+                        life: 3000
+                      });
+                      fetchEvents();
+                      if ((window as any).refreshEventBadge) {
+                        await (window as any).refreshEventBadge();
+                      }
+                    } catch (error) {
+                      console.error('Demo error:', error);
+                    }
+                  }}
+                  sx={{ fontSize: '0.75rem' }}
+                >
+                  ➕ Demo: Create New Event
+                </Button>
+                
+                <Button
+                  variant="outlined"
+                  size="small"
+                  color="success"
+                  onClick={() => {
                     toast.current?.show({
                       severity: 'success',
-                      summary: 'Demo Event Created',
-                      detail: response.data.message,
-                      life: 3000
+                      summary: 'PrimeReact DataTable Features',
+                      detail: '🎉 Advanced filtering, sorting, export, selection, column management and more!',
+                      life: 5000
                     });
-                    fetchEvents();
-                    if ((window as any).refreshEventBadge) {
-                      await (window as any).refreshEventBadge();
-                    }
-                  } catch (error) {
-                    console.error('Demo error:', error);
-                  }
-                }}
-                sx={{ fontSize: '0.75rem' }}
-              >
-                ➕ Demo: Create New Event
-              </Button>
-              
+                  }}
+                  sx={{ fontSize: '0.75rem' }}
+                >
+                  🎯 PrimeReact Features
+                </Button>
+              </>
+            )}
+
+            {canCreateEvent() && (
               <Button
-                variant="outlined"
-                size="small"
-                color="success"
-                onClick={() => {
-                  toast.current?.show({
-                    severity: 'success',
-                    summary: 'PrimeReact DataTable Features',
-                    detail: '🎉 Advanced filtering, sorting, export, selection, column management and more!',
-                    life: 5000
-                  });
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => navigate('/events/new')}
+                sx={{ 
+                  backgroundColor: 'primary.main',
+                  '&:hover': { backgroundColor: 'primary.dark' },
+                  fontWeight: 600,
+                  px: 3
                 }}
-                sx={{ fontSize: '0.75rem' }}
               >
-                🎯 PrimeReact Features
+                Create Event
               </Button>
-            </>
-          )}
-
-          {canCreateEvent() && (
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => navigate('/events/new')}
-              sx={{ 
-                backgroundColor: 'primary.main',
-                '&:hover': { backgroundColor: 'primary.dark' },
-                fontWeight: 600,
-                px: 3
-              }}
-            >
-              Create Event
-            </Button>
-          )}
+            )}
+          </Box>
         </Box>
+
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
+
+        {/* PrimeReact DataTable with Custom Styling */}
+        <Paper sx={{ 
+          backgroundColor: 'background.paper', 
+          boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+        }}>
+          <StyledDataTableWrapper>
+            <DataTable
+              value={events}
+              paginator
+              rows={10}
+              rowsPerPageOptions={[10, 25, 50, 100]}
+              paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+              currentPageReportTemplate="Showing {first} to {last} of {totalRecords} events"
+              globalFilterFields={['title', 'description', 'branch.name', 'status', 'eventType.name', 'location', 'plannedEnquiries', 'actualEnquiries', 'plannedOrders', 'actualOrders']}
+              filters={filters}
+              onFilter={(e) => {
+                setFilters(e.filters);
+              }}
+              onValueChange={(filteredData) => {
+                console.log('DataTable onValueChange:', { 
+                  type: typeof filteredData, 
+                  isArray: Array.isArray(filteredData),
+                  length: filteredData?.length,
+                  data: filteredData 
+                });
+                setFilteredEvents(filteredData || []);
+              }}
+              header={renderHeader()}
+              emptyMessage="No events found."
+              loading={loading}
+              sortMode="multiple"
+              removableSort
+              sortField="updatedAt"
+              sortOrder={-1}
+              resizableColumns
+              columnResizeMode="fit"
+              reorderableColumns
+              scrollable
+              scrollHeight="calc(100vh - 280px)"
+              stripedRows={false}
+              showGridlines
+              size="small"
+              responsiveLayout="stack"
+              breakpoint="960px"
+              style={{ width: '100%' }}
+              rowClassName={(data) => data.isNew ? 'p-highlight' : ''}
+              onRowClick={(e) => navigate(`/events/${e.data.id}`)}
+              exportFilename={`events_${new Date().toISOString().split('T')[0]}`}
+              ref={dt}
+            >
+              {visibleColumns.title && (
+                <Column 
+                  field="title" 
+                  header="Event Details" 
+                  body={eventDetailsTemplate}
+                  sortable 
+                  filter 
+                  filterPlaceholder="Search by title..."
+                  style={{ minWidth: '14rem', maxWidth: '18rem' }}
+                  headerStyle={{ fontWeight: 600 }}
+                />
+              )}
+              
+              {visibleColumns.branch && (
+                <Column 
+                  field="branch.name" 
+                  header="Branch" 
+                  body={branchTemplate}
+                  sortable 
+                  filter 
+                  filterElement={branchFilterTemplate}
+                  showFilterMatchModes={false}
+                  style={{ minWidth: '7rem', maxWidth: '9rem' }}
+                  headerStyle={{ fontWeight: 600 }}
+                />
+              )}
+              
+              {visibleColumns.status && (
+                <Column 
+                  field="status" 
+                  header="Status" 
+                  body={statusTemplate}
+                  sortable 
+                  filter 
+                  filterElement={statusFilterTemplate}
+                  showFilterMatchModes={false}
+                  style={{ minWidth: '6rem', maxWidth: '7rem' }}
+                  headerStyle={{ fontWeight: 600 }}
+                />
+              )}
+              
+              {visibleColumns.startDate && (
+                <Column 
+                  field="startDate" 
+                  header="Start Date"
+                  body={dateTemplate}
+                  sortable 
+                  filter 
+                  filterElement={(options) => <Calendar value={options.value} onChange={(e) => options.filterCallback(e.value)} dateFormat="mm/dd/yy" placeholder="mm/dd/yyyy" />}
+                  style={{ minWidth: '7rem', maxWidth: '9rem' }}
+                  headerStyle={{ fontWeight: 600 }}
+                />
+              )}
+              
+              {visibleColumns.startDate && (
+                <Column 
+                  field="endDate" 
+                  header="End Date"
+                  body={(rowData) => new Date(rowData.endDate).toLocaleDateString()}
+                  sortable 
+                  style={{ minWidth: '6rem', maxWidth: '8rem' }}
+                  headerStyle={{ fontWeight: 600 }}
+                  hidden={true}
+                />
+              )}
+              
+              {visibleColumns.location && (
+                <Column 
+                  field="location" 
+                  header="Location" 
+                  body={compactLocationTemplate}
+                  sortable 
+                  filter 
+                  filterPlaceholder="Search by location..."
+                  style={{ minWidth: '6rem', maxWidth: '8rem' }}
+                  headerStyle={{ fontWeight: 600 }}
+                />
+              )}
+              
+              {visibleColumns.budget && (
+                <Column 
+                  field="budget" 
+                  header="Budget" 
+                  body={budgetTemplate}
+                  sortable 
+                  filter 
+                  dataType="numeric"
+                  style={{ minWidth: '5rem', maxWidth: '7rem' }}
+                  headerStyle={{ fontWeight: 600 }}
+                />
+              )}
+              
+              {visibleColumns.eventType && (
+                <Column 
+                  field="eventType.name" 
+                  header="Event Type" 
+                  body={eventTypeTemplate}
+                  sortable 
+                  filter 
+                  filterElement={eventTypeFilterTemplate}
+                  showFilterMatchModes={false}
+                  style={{ minWidth: '7rem', maxWidth: '9rem' }}
+                  headerStyle={{ fontWeight: 600 }}
+                />
+              )}
+              
+              {visibleColumns.products && (
+                <Column 
+                  field="products" 
+                  header="Products" 
+                  body={compactProductsTemplate}
+                  style={{ minWidth: '7rem', maxWidth: '9rem' }}
+                  headerStyle={{ fontWeight: 600 }}
+                />
+              )}
+              
+              {visibleColumns.enquiriesMetrics && (
+                <Column 
+                  field="plannedEnquiries" 
+                  header="Planned Enquiries"
+                  body={(rowData) => rowData.plannedEnquiries || 0}
+                  sortable 
+                  dataType="numeric"
+                  style={{ minWidth: '6rem', maxWidth: '8rem' }}
+                  headerStyle={{ fontWeight: 600 }}
+                  hidden={true}
+                />
+              )}
+              
+              {visibleColumns.enquiriesMetrics && (
+                <Column 
+                  field="actualEnquiries" 
+                  header="Actual Enquiries"
+                  body={(rowData) => rowData.actualEnquiries || 0}
+                  sortable 
+                  filter
+                  filterElement={enquiriesFilterTemplate}
+                  dataType="numeric"
+                  style={{ minWidth: '6rem', maxWidth: '8rem' }}
+                  headerStyle={{ fontWeight: 600 }}
+                  hidden={true}
+                />
+              )}
+              
+              {visibleColumns.enquiriesMetrics && (
+                <Column 
+                  field="actualEnquiries" 
+                  header="Enquiries (A/P)"
+                  body={enquiriesMetricsTemplate}
+                  sortable 
+                  filter
+                  filterElement={enquiriesFilterTemplate}
+                  dataType="numeric"
+                  style={{ minWidth: '6rem', maxWidth: '8rem' }}
+                  headerStyle={{ fontWeight: 600 }}
+                />
+              )}
+              
+              {visibleColumns.ordersMetrics && (
+                <Column 
+                  field="plannedOrders" 
+                  header="Planned Orders"
+                  body={(rowData) => rowData.plannedOrders || 0}
+                  sortable 
+                  dataType="numeric"
+                  style={{ minWidth: '6rem', maxWidth: '8rem' }}
+                  headerStyle={{ fontWeight: 600 }}
+                  hidden={true}
+                />
+              )}
+
+              {visibleColumns.ordersMetrics && (
+                <Column 
+                  field="actualOrders" 
+                  header="Actual Orders"
+                  body={(rowData) => rowData.actualOrders || 0}
+                  sortable 
+                  filter
+                  filterElement={ordersFilterTemplate}
+                  dataType="numeric"
+                  style={{ minWidth: '6rem', maxWidth: '8rem' }}
+                  headerStyle={{ fontWeight: 600 }}
+                  hidden={true}
+                />
+              )}
+
+              {visibleColumns.ordersMetrics && (
+                <Column 
+                  field="actualOrders" 
+                  header="Orders (A/P)"
+                  body={ordersMetricsTemplate}
+                  sortable 
+                  filter
+                  filterElement={ordersFilterTemplate}
+                  dataType="numeric"
+                  style={{ minWidth: '6rem', maxWidth: '8rem' }}
+                  headerStyle={{ fontWeight: 600 }}
+                />
+              )}
+            </DataTable>
+          </StyledDataTableWrapper>
+        </Paper>
       </Box>
-
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
-
-      {/* PrimeReact DataTable with Custom Styling */}
-      <Paper sx={{ 
-        backgroundColor: 'background.paper', 
-        boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-      }}>
-        <StyledDataTableWrapper>
-          <DataTable
-            ref={dt}
-            value={events}
-            paginator
-            rows={10}
-            rowsPerPageOptions={[10, 25, 50, 100]}
-            paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-            currentPageReportTemplate="Showing {first} to {last} of {totalRecords} events"
-            globalFilterFields={['title', 'description', 'branch.name', 'status', 'eventType.name', 'location']}
-            filters={filters}
-            onFilter={(e) => setFilters(e.filters)}
-            header={renderHeader()}
-            emptyMessage="No events found."
-            loading={loading}
-            sortMode="multiple"
-            removableSort
-            sortField="updatedAt"
-            sortOrder={-1}
-            resizableColumns
-            columnResizeMode="fit"
-            reorderableColumns
-            scrollable
-            scrollHeight="calc(100vh - 280px)"
-            stripedRows={false}
-            showGridlines
-            size="small"
-            responsiveLayout="stack"
-            breakpoint="960px"
-            style={{ width: '100%' }}
-            rowClassName={(data) => data.isNew ? 'p-highlight' : ''}
-            onRowClick={(e) => navigate(`/events/${e.data.id}`)}
-          >
-            {visibleColumns.title && (
-              <Column 
-                field="title" 
-                header="Event Details" 
-                body={eventDetailsTemplate}
-                sortable 
-                filter 
-                filterPlaceholder="Search by title..."
-                style={{ minWidth: '14rem', maxWidth: '18rem' }}
-                headerStyle={{ fontWeight: 600 }}
-              />
-            )}
-            
-            {visibleColumns.branch && (
-              <Column 
-                field="branch.name" 
-                header="Branch" 
-                body={branchTemplate}
-                sortable 
-                filter 
-                filterElement={branchFilterTemplate}
-                showFilterMatchModes={false}
-                style={{ minWidth: '7rem', maxWidth: '9rem' }}
-                headerStyle={{ fontWeight: 600 }}
-              />
-            )}
-            
-            {visibleColumns.status && (
-              <Column 
-                field="status" 
-                header="Status" 
-                body={statusTemplate}
-                sortable 
-                filter 
-                filterElement={statusFilterTemplate}
-                showFilterMatchModes={false}
-                style={{ minWidth: '6rem', maxWidth: '7rem' }}
-                headerStyle={{ fontWeight: 600 }}
-              />
-            )}
-            
-            {visibleColumns.startDate && (
-              <Column 
-                field="startDate" 
-                header="Event Period" 
-                body={dateTemplate}
-                sortable 
-                filter 
-                filterElement={(options) => <Calendar value={options.value} onChange={(e) => options.filterCallback(e.value)} dateFormat="mm/dd/yy" placeholder="mm/dd/yyyy" />}
-                style={{ minWidth: '7rem', maxWidth: '9rem' }}
-                headerStyle={{ fontWeight: 600 }}
-              />
-            )}
-            
-            {visibleColumns.location && (
-              <Column 
-                field="location" 
-                header="Location" 
-                body={compactLocationTemplate}
-                sortable 
-                filter 
-                filterPlaceholder="Search by location..."
-                style={{ minWidth: '6rem', maxWidth: '8rem' }}
-                headerStyle={{ fontWeight: 600 }}
-              />
-            )}
-            
-            {visibleColumns.budget && (
-              <Column 
-                field="budget" 
-                header="Budget" 
-                body={budgetTemplate}
-                sortable 
-                filter 
-                dataType="numeric"
-                style={{ minWidth: '5rem', maxWidth: '7rem' }}
-                headerStyle={{ fontWeight: 600 }}
-              />
-            )}
-            
-            {visibleColumns.eventType && (
-              <Column 
-                field="eventType.name" 
-                header="Event Type" 
-                body={eventTypeTemplate}
-                sortable 
-                filter 
-                filterElement={eventTypeFilterTemplate}
-                showFilterMatchModes={false}
-                style={{ minWidth: '7rem', maxWidth: '9rem' }}
-                headerStyle={{ fontWeight: 600 }}
-              />
-            )}
-            
-            {visibleColumns.products && (
-              <Column 
-                field="products" 
-                header="Products" 
-                body={compactProductsTemplate}
-                style={{ minWidth: '7rem', maxWidth: '9rem' }}
-                headerStyle={{ fontWeight: 600 }}
-              />
-            )}
-          </DataTable>
-        </StyledDataTableWrapper>
-      </Paper>
-    </Box>
+    </PrimeReactProvider>
   );
 };
 
