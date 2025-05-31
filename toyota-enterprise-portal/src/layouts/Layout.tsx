@@ -70,7 +70,10 @@ const Layout = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [notificationAnchor, setNotificationAnchor] = useState<null | HTMLElement>(null);
-  const [expandedMenus, setExpandedMenus] = useState<{[key: string]: boolean}>({});
+  const [expandedMenus, setExpandedMenus] = useState<{[key: string]: boolean}>({
+    'Events': true,
+    'Analytics': true,
+  });
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [eventBadgeCount, setEventBadgeCount] = useState(0);

@@ -584,7 +584,7 @@ const EventForm = () => {
       {isMetricsMode && (
         <Alert severity="info" sx={{ mb: 2 }}>
           <Typography variant="subtitle2" gutterBottom>Metrics Edit Mode</Typography>
-          You can only edit the actual results (cost, leads, orders) for this completed event. 
+          You can only edit the actual results (cost, enquiries, orders) for this completed event. 
           All other fields are read-only to maintain event integrity.
         </Alert>
       )}
@@ -799,7 +799,7 @@ const EventForm = () => {
               <TextField
                 fullWidth
                 size="small"
-                label="Expected Leads"
+                label="Expected Enquiries"
                 name="plannedEnquiries"
                 type="number"
                 value={formData.plannedEnquiries}
@@ -862,7 +862,7 @@ const EventForm = () => {
               <TextField
                 fullWidth
                 size="small"
-                label="Actual Leads"
+                label="Actual Enquiries"
                 name="actualEnquiries"
                 type="number"
                 value={formData.actualEnquiries}

@@ -491,7 +491,7 @@ const EventDetails = () => {
     if (!event) return [];
     const missing = [];
     if (!event.actualBudget || event.actualBudget <= 0) missing.push('Actual Cost');
-    if (event.actualEnquiries === null || event.actualEnquiries === undefined) missing.push('Actual Leads');  
+    if (event.actualEnquiries === null || event.actualEnquiries === undefined) missing.push('Actual Enquiries');  
     if (event.actualOrders === null || event.actualOrders === undefined) missing.push('Actual Orders');
     return missing;
   };
@@ -795,12 +795,12 @@ const EventDetails = () => {
                     </Paper>
                   </Grid>
 
-                  {/* Lead Generation Metrics */}
+                  {/* Enquiry Generation Metrics */}
                   {(event.plannedEnquiries || event.actualEnquiries) && (
                     <Grid item xs={12} md={4}>
                       <Paper sx={{ p: 3, textAlign: 'center', border: '1px solid', borderColor: 'divider' }}>
                         <PersonIcon sx={{ fontSize: 40, color: 'warning.main', mb: 1 }} />
-                        <Typography variant="subtitle2" color="text.secondary" gutterBottom>Lead Generation</Typography>
+                        <Typography variant="subtitle2" color="text.secondary" gutterBottom>Enquiry Generation</Typography>
                         <Typography variant="h6" fontWeight="bold">
                           {event.actualEnquiries !== undefined ? event.actualEnquiries : (
                             <Box component="span" sx={{ color: 'warning.main', fontStyle: 'italic' }}>
