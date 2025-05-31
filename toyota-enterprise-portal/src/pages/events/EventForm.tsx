@@ -20,6 +20,7 @@ import {
   Stack,
   FormControlLabel,
   Switch,
+  Autocomplete,
 } from '@mui/material';
 import { ArrowBack as ArrowBackIcon, Event as EventIcon, Schedule as ScheduleIcon, AttachFile as AttachFileIcon, Delete as DeleteIcon, Download as DownloadIcon } from '@mui/icons-material';
 import { LocalizationProvider, DateTimePicker, StaticDatePicker, TimePicker } from '@mui/x-date-pickers';
@@ -58,6 +59,7 @@ const EventForm = () => {
   const [error, setError] = useState('');
   const [branches, setBranches] = useState<Branch[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
   const [eventTypes, setEventTypes] = useState<EventType[]>([]);
 
   // Check if we're in metrics-only edit mode
@@ -71,7 +73,7 @@ const EventForm = () => {
     endDate: dayjs().add(1, 'hour'),
     budget: '',
     branchId: '',
-    productId: '',
+    productIds: [] as number[],
     eventTypeId: '',
     isPlanned: true,
     // Planned Metrics
@@ -93,22 +95,27 @@ const EventForm = () => {
     endDate: '',
   });
 
+  // Validation state
+  const [formSubmitted, setFormSubmitted] = useState(false);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         const token = localStorage.getItem('token');
         const headers = { Authorization: `Bearer ${token}` };
 
-        // Fetch branches, products, and event types
-        const [branchesRes, productsRes, eventTypesRes] = await Promise.all([
+        // Fetch branches, products, event types, and current user info
+        const [branchesRes, productsRes, eventTypesRes, userRes] = await Promise.all([
           api.get('branches', { headers }),
           api.get('products', { headers }),
           api.get('event-types', { headers }),
+          api.get('auth/me', { headers }),
         ]);
 
         console.log('Fetched branches:', branchesRes.data);
         console.log('Fetched products:', productsRes.data);
         console.log('Fetched event types:', eventTypesRes.data);
+        console.log('Current user:', userRes.data);
 
         setBranches(branchesRes.data);
         setProducts(productsRes.data);
@@ -123,9 +130,8 @@ const EventForm = () => {
           console.log('Event eventType:', event.eventType);
           console.log('Event attachments:', event.attachments);
           
-          const productId = event.products?.map((p: Product) => p.id) || [];
-          console.log('Mapped productId:', productId);
-          console.log('ProductId type:', typeof productId[0]);
+          const productIds = event.products?.map((p: Product) => p.id) || [];
+          console.log('Mapped productIds:', productIds);
           
           const newFormData = {
             title: event.title,
@@ -135,7 +141,7 @@ const EventForm = () => {
             endDate: dayjs(event.endDate),
             budget: event.budget.toString(),
             branchId: event.branch?.id || '',
-            productId: productId[0] || '',
+            productIds: productIds,
             eventTypeId: event.eventType?.id || '',
             isPlanned: event.isPlanned,
             plannedBudget: event.plannedBudget?.toString() || '',
@@ -147,8 +153,12 @@ const EventForm = () => {
           };
           
           console.log('Setting formData:', newFormData);
-          console.log('FormData productId:', newFormData.productId);
+          console.log('FormData productIds:', newFormData.productIds);
           setFormData(newFormData);
+          setSelectedProducts(event.products || []);
+          
+          // Reset validation states for editing mode
+          setFormSubmitted(false);
           
           // Set existing attachments
           if (event.attachments && event.attachments.length > 0) {
@@ -158,6 +168,16 @@ const EventForm = () => {
           
           // Reset deletion tracking
           setAttachmentsToDelete([]);
+        } else {
+          // For new events, auto-fill the user's branch
+          const currentUser = userRes.data;
+          if (currentUser.branch && currentUser.branch.id) {
+            console.log('Auto-filling branch for new event:', currentUser.branch);
+            setFormData(prev => ({
+              ...prev,
+              branchId: currentUser.branch.id.toString()
+            }));
+          }
         }
       } catch (err: any) {
         setError(err.response?.data?.message || 'Error loading data');
@@ -173,11 +193,11 @@ const EventForm = () => {
     console.log('Products length:', products.length);
   }, [products]);
 
-  // Debug logging for formData.productId state
+  // Debug logging for formData.productIds state
   useEffect(() => {
-    console.log('FormData.productId updated:', formData.productId);
-    console.log('ProductId type check:', formData.productId ? { id: formData.productId, type: typeof formData.productId } : null);
-  }, [formData.productId]);
+    console.log('FormData.productIds updated:', formData.productIds);
+    console.log('Selected products:', selectedProducts);
+  }, [formData.productIds, selectedProducts]);
 
   // Validation function for dates
   const validateDates = (startDate: dayjs.Dayjs, endDate: dayjs.Dayjs) => {
@@ -246,6 +266,7 @@ const EventForm = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setFormSubmitted(true);
 
     try {
       const token = localStorage.getItem('token');
@@ -268,6 +289,12 @@ const EventForm = () => {
         navigate(`/events/${id}`);
         return;
       }
+
+      // Validate products are selected
+      if (!isMetricsMode && selectedProducts.length === 0) {
+        setError('Please select at least one product for the event');
+        return;
+      }
       
       // Rest of the existing handleSubmit logic for full event editing
       // First, delete any attachments marked for deletion
@@ -285,6 +312,8 @@ const EventForm = () => {
       // Check if we have attachments
       const hasAttachments = attachments.length > 0;
       
+      let response;
+      
       if (hasAttachments) {
         // Use FormData for file uploads
         const formDataToSend = new FormData();
@@ -301,8 +330,10 @@ const EventForm = () => {
         formDataToSend.append('isPlanned', formData.isPlanned.toString());
         
         // Add product IDs
-        if (formData.productId) {
-          formDataToSend.append('productIds', formData.productId.toString());
+        if (formData.productIds && formData.productIds.length > 0) {
+          formData.productIds.forEach(productId => {
+            formDataToSend.append('productIds', productId.toString());
+          });
         }
         
         // Add optional metrics
@@ -324,9 +355,9 @@ const EventForm = () => {
         };
 
         if (id) {
-          await api.put(`events/${id}`, formDataToSend, { headers });
+          response = await api.put(`events/${id}`, formDataToSend, { headers });
         } else {
-          await api.post('events', formDataToSend, { headers });
+          response = await api.post('events', formDataToSend, { headers });
         }
       } else {
         // Use regular JSON for requests without attachments
@@ -337,7 +368,7 @@ const EventForm = () => {
         
         const data = {
           ...formData,
-          productIds: formData.productId ? [parseInt(formData.productId.toString())] : [],
+          productIds: formData.productIds,
           startDate: formData.startDate.toISOString(),
           endDate: formData.endDate.toISOString(),
           budget: parseFloat(formData.budget),
@@ -352,13 +383,15 @@ const EventForm = () => {
         };
 
         if (id) {
-          await api.put(`events/${id}`, data, { headers });
+          response = await api.put(`events/${id}`, data, { headers });
         } else {
-          await api.post('events', data, { headers });
+          response = await api.post('events', data, { headers });
         }
       }
 
-      navigate('/events');
+      // Redirect to the event's view page
+      const eventId = id || response.data.id;
+      navigate(`/events/${eventId}`);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error saving event');
     }
@@ -638,6 +671,11 @@ const EventForm = () => {
                     </MenuItem>
                   ))}
                 </Select>
+                {!id && !isMetricsMode && (
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, ml: 1.5 }}>
+                    Pre-filled with your branch. You can change it if needed.
+                  </Typography>
+                )}
               </FormControl>
             </Grid>
 
@@ -679,22 +717,48 @@ const EventForm = () => {
             </Grid>
 
             <Grid item xs={12}>
-              <FormControl fullWidth required={!isMetricsMode} size="small">
-                <InputLabel>Product</InputLabel>
-                <Select
-                  name="productId"
-                  value={formData.productId}
-                  onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
-                  label="Product"
-                  disabled={isMetricsMode}
-                >
-                  {products.map((product) => (
-                    <MenuItem key={product.id} value={product.id}>
-                      {product.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              <Autocomplete
+                multiple
+                options={products}
+                getOptionLabel={(option) => option.name}
+                value={selectedProducts}
+                onChange={(_, newValue) => {
+                  setSelectedProducts(newValue);
+                  setFormData(prev => ({
+                    ...prev,
+                    productIds: newValue.map(p => p.id)
+                  }));
+                }}
+                renderInput={(params) => {
+                  const hasNoProducts = selectedProducts.length === 0;
+                  const shouldShowError = !isMetricsMode && hasNoProducts && formSubmitted;
+                  return (
+                    <TextField
+                      {...params}
+                      label="Products"
+                      placeholder="Select products"
+                      size="small"
+                      error={shouldShowError}
+                      helperText={
+                        shouldShowError
+                          ? "Please select at least one product" 
+                          : "Select the products this event will promote"
+                      }
+                    />
+                  );
+                }}
+                renderTags={(value, getTagProps) =>
+                  value.map((option, index) => (
+                    <Chip
+                      label={option.name}
+                      {...getTagProps({ index })}
+                      key={option.id}
+                      size="small"
+                    />
+                  ))
+                }
+                disabled={isMetricsMode}
+              />
             </Grid>
 
             <Grid item xs={12}>

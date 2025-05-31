@@ -579,15 +579,61 @@ const Events = () => {
 
   // Export functions with proper column names and filtered data
   const exportCSV = () => {
-    // Use PrimeReact's built-in CSV export
-    dt.current?.exportCSV();
+    // Custom CSV export with proper null handling
+    const filteredData = getFilteredData();
+    
+    // Prepare CSV data with null values converted to 0 for numeric fields
+    const csvData = filteredData.map((event: Event) => ({
+      'Title': event.title || '',
+      'Description': event.description || '',
+      'Branch': event.branch?.name || '',
+      'Location': event.location || '',
+      'Status': event.status || '',
+      'Start Date': new Date(event.startDate).toLocaleDateString(),
+      'End Date': new Date(event.endDate).toLocaleDateString(),
+      'Budget': event.budget || 0,
+      'Event Type': event.eventType?.name || 'No Type',
+      'Products': event.products?.map((p: any) => p.name).join(', ') || 'None',
+      'Planned Enquiries': event.plannedEnquiries || 0,
+      'Actual Enquiries': event.actualEnquiries || 0,
+      'Planned Orders': event.plannedOrders || 0,
+      'Actual Orders': event.actualOrders || 0,
+      'Enquiries Achievement %': event.plannedEnquiries > 0 ? Math.round(((event.actualEnquiries || 0) / event.plannedEnquiries) * 100) : 0,
+      'Orders Achievement %': event.plannedOrders > 0 ? Math.round(((event.actualOrders || 0) / event.plannedOrders) * 100) : 0
+    }));
+    
+    // Convert to CSV format
+    const headers = Object.keys(csvData[0] || {});
+    const csvContent = [
+      headers.join(','), // Header row
+      ...csvData.map(row => 
+        headers.map(header => {
+          const value = (row as any)[header];
+          // Handle values that might contain commas by wrapping in quotes
+          if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+            return `"${value.replace(/"/g, '""')}"`;
+          }
+          return value;
+        }).join(',')
+      )
+    ].join('\n');
+    
+    // Create and download CSV file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `events_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
     
     // Show success message
-    const filteredData = getFilteredData();
     toast.current?.show({ 
       severity: 'success', 
       summary: 'CSV Export Complete', 
-      detail: `${filteredData.length} events exported to CSV` 
+      detail: `${filteredData.length} events exported to CSV with cleaned data` 
     });
   };
 

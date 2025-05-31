@@ -220,7 +220,8 @@ const EventDetails = () => {
 
   // Check if user can edit the event details
   const canEditEvent = () => {
-    if (!event || currentUserRole === 'admin') return true; // Admin can always edit
+    if (!event) return false; // Can't edit if no event data loaded
+    if (currentUserRole === 'admin') return true; // Admin can always edit
     
     const status = event.status.toLowerCase();
     const isSameBranch = currentUserBranch?.id === event.branch.id;
@@ -231,8 +232,11 @@ const EventDetails = () => {
     }
     
     // General Manager can edit any event in their branch while pending approval
-    if (currentUserRole === 'general_manager' && isSameBranch) {
-      return status === 'draft' || status === 'pending_gm';
+    // OR they can edit their own events regardless of branch issues
+    if (currentUserRole === 'general_manager') {
+      if ((isSameBranch || isEventCreator) && (status === 'draft' || status === 'pending_gm')) {
+        return true;
+      }
     }
     
     // Marketing Head can edit events pending their approval
@@ -245,7 +249,8 @@ const EventDetails = () => {
 
   // Check if user can delete the event
   const canDeleteEvent = () => {
-    if (!event || currentUserRole === 'admin') return true; // Admin can always delete
+    if (!event) return false; // Can't delete if no event data loaded
+    if (currentUserRole === 'admin') return true; // Admin can always delete
     
     const status = event.status.toLowerCase();
     const isSameBranch = currentUserBranch?.id === event.branch.id;
@@ -275,7 +280,8 @@ const EventDetails = () => {
 
   // Check if user can edit post-event metrics (actual values)
   const canEditMetrics = () => {
-    if (!event || currentUserRole === 'admin') return true; // Admin can always edit
+    if (!event) return false; // Can't edit if no event data loaded
+    if (currentUserRole === 'admin') return true; // Admin can always edit
     
     const status = event.status.toLowerCase();
     
@@ -317,12 +323,12 @@ const EventDetails = () => {
     }
     
     if (currentUserRole === 'general_manager') {
-      if (!isSameBranch) {
-        return 'You can only edit events from your branch.';
+      if (!isSameBranch && !isEventCreator) {
+        return 'You can only edit events from your branch or events you created.';
       }
       if (isEventCreator) {
         if (status === 'draft' || status === 'rejected') {
-          return 'You can edit your own event. Submit to Marketing when ready for approval.';
+          return 'You can edit your own event. Submit to GM for approval when ready.';
         }
         if (status === 'pending_gm' || status === 'pending_marketing') {
           return 'Event is under review. Limited editing allowed.';
@@ -330,7 +336,7 @@ const EventDetails = () => {
         if (status === 'approved' || status === 'completed') {
           return 'Event details are locked after approval. You can only edit post-event metrics.';
         }
-      } else {
+      } else if (isSameBranch) {
         if (status === 'draft' || status === 'pending_gm') {
           return 'You can edit events in your branch pending approval.';
         }
@@ -920,10 +926,7 @@ const EventDetails = () => {
                       <strong>1. Draft</strong> → Create and edit your event details
                     </Typography>
                     <Typography variant="body2" paragraph>
-                      <strong>2a. Sales Manager Path:</strong> Draft → Pending GM → Pending Marketing → Approved
-                    </Typography>
-                    <Typography variant="body2" paragraph>
-                      <strong>2b. GM Path:</strong> Draft → Pending Marketing → Approved (GM can skip own approval)
+                      <strong>2. Approval Process:</strong> Draft → Pending GM → Pending Marketing → Approved
                     </Typography>
                     <Typography variant="body2" paragraph>
                       <strong>3. Approved</strong> → Event is ready to execute
@@ -948,7 +951,7 @@ const EventDetails = () => {
                         )}
                         {currentUserRole === 'general_manager' && isEventCreator && (
                           <Typography variant="body2" color="text.secondary">
-                            As GM, you can either submit directly to Marketing Head or request peer GM review first.
+                            Your event is in draft mode. Submit it to another General Manager for approval when ready.
                           </Typography>
                         )}
                         {!isEventCreator && (
