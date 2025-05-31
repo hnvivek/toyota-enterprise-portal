@@ -272,7 +272,7 @@ const Layout = () => {
       text: 'Events', 
       icon: <EventIcon />, 
       path: '/events', 
-      badge: eventBadgeCount > 0 ? eventBadgeCount : null,
+      badge: null,
       submenu: [
         { 
           text: 'All Events', 
@@ -282,7 +282,7 @@ const Layout = () => {
         ...(canCreateEvent() ? [{ 
           text: 'Create Event', 
           path: '/events/new',
-          badge: null  // Fixed: removed pendingApprovalsBadgeCount from Create Event
+          badge: null
         }] : []),
         { text: 'Event Calendar', path: '/events/calendar' },
       ]

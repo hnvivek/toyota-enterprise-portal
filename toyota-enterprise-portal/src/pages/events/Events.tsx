@@ -444,30 +444,68 @@ const Events = () => {
     fetchEvents();
   }, [fetchEvents]);
 
-  // Mark events as seen when page loads
+  // Mark events as seen when user navigates away from the page
   useEffect(() => {
+    let hasViewedPage = false;
+    
+    // Mark that user has viewed the page after a short delay
+    const viewTimer = setTimeout(() => {
+      hasViewedPage = true;
+      console.log('User has viewed the Events page');
+    }, 500); // 500ms - reasonable time to ensure they actually viewed the page
+
     const markEventsAsSeen = async () => {
+      // Only mark as seen if user actually viewed the page
+      if (!hasViewedPage) {
+        console.log('User left too quickly, not marking events as seen');
+        return;
+      }
+
       try {
         const token = localStorage.getItem('token');
         if (token) {
+          console.log('Marking events as seen on page exit...');
           await api.post('/stats/events/mark-seen', {}, {
             headers: { Authorization: `Bearer ${token}` }
           });
           
+          // Refresh badge immediately after marking as seen
           if ((window as any).refreshEventBadge) {
             await (window as any).refreshEventBadge();
           }
+          console.log('Events marked as seen and badge refreshed on exit');
         }
       } catch (error) {
         console.error('Error marking events as seen:', error);
       }
     };
 
-    const timer = setTimeout(() => {
-      markEventsAsSeen();
-    }, 30000);
+    // Handle browser tab/window close
+    const handleBeforeUnload = () => {
+      if (hasViewedPage) {
+        const token = localStorage.getItem('token');
+        if (token) {
+          try {
+            // Use sendBeacon for reliable data sending during page unload
+            const formData = new FormData();
+            formData.append('_method', 'POST');
+            navigator.sendBeacon('/api/stats/events/mark-seen', formData);
+          } catch (error) {
+            console.error('Error with sendBeacon:', error);
+          }
+        }
+      }
+    };
 
-    return () => clearTimeout(timer);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    // Cleanup function - only runs when component unmounts (user navigates away)
+    return () => {
+      clearTimeout(viewTimer);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      // Only mark as seen if user actually viewed the page
+      markEventsAsSeen();
+    };
   }, []);
 
   const handleRefresh = () => {
