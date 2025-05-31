@@ -410,14 +410,21 @@ const Layout = () => {
           component="img" 
           src={ToyotaLogo} 
           alt="Toyota Logo" 
-          sx={{ height: 40, maxWidth: '64px', flexShrink: 0 }}
+          sx={{ 
+            height: 40, 
+            maxWidth: '64px', 
+            flexShrink: 0,
+            filter: theme.palette.mode === 'dark' 
+              ? 'brightness(0) invert(1)' // White in dark mode
+              : 'brightness(0) invert(0)'  // Black in light mode
+          }}
         />
         <Box sx={{ flexGrow: 0 }}>
           <Typography 
             variant="h6" 
             sx={{ 
               fontWeight: 'bold', 
-              color: theme.palette.primary.main,
+              color: theme.palette.text.primary,
               fontSize: '1.1rem',
               lineHeight: 1.2
             }}
