@@ -13,73 +13,52 @@ export class DashboardController {
     async summary(request: Request, response: Response) {
         try {
             const branchId = request.query.branchId as string;
-            console.log('=== SUMMARY ENDPOINT DEBUG ===');
-            console.log('Raw branchId from query:', branchId, typeof branchId);
-
-            let events: Event[] = [];
+            const startDate = request.query.startDate as string;
+            const endDate = request.query.endDate as string;
             
+            console.log('=== SUMMARY ENDPOINT DEBUG ===');
+            console.log('Query parameters:', { branchId, startDate, endDate });
+
+            // Build where conditions
+            let whereConditions: any = {
+                isActive: true
+            };
+
+            // Add branch filter if provided
             if (branchId && !isNaN(Number(branchId))) {
-                const branchIdNum = parseInt(branchId, 10);
-                console.log('Filtering by branchId:', branchIdNum);
+                whereConditions.branchId = parseInt(branchId, 10);
+                console.log('Filtering by branchId:', whereConditions.branchId);
+            }
+
+            // Add date filter if provided
+            if (startDate && endDate) {
+                const start = new Date(startDate);
+                const end = new Date(endDate);
                 
-                // Method 1: Direct repository find with where clause
-                events = await this.eventRepository.find({
-                    where: {
-                        branchId: branchIdNum,
-                        isActive: true
-                    },
-                    relations: ['branch']
-                });
+                // Set end date to end of day to include events on the end date
+                end.setHours(23, 59, 59, 999);
                 
-                console.log('Method 1 - Direct find results:', events.length);
-                console.log('Events found:', events.map(e => ({
+                whereConditions.startDate = Between(start, end);
+                console.log('Filtering by date range:', { start, end });
+            }
+
+            console.log('Final where conditions:', whereConditions);
+
+            // Fetch events with conditions
+            const events = await this.eventRepository.find({
+                where: whereConditions,
+                relations: ['branch']
+            });
+            
+            console.log('Events found:', events.length);
+            if (events.length > 0) {
+                console.log('Sample events:', events.slice(0, 3).map(e => ({
                     id: e.id,
                     title: e.title,
+                    startDate: e.startDate,
                     branchId: e.branchId,
-                    branchName: e.branch?.name,
-                    budget: e.budget
+                    branchName: e.branch?.name
                 })));
-                
-                // Method 2: Query builder for comparison
-                const queryBuilderEvents = await this.eventRepository
-                    .createQueryBuilder("event")
-                    .leftJoinAndSelect("event.branch", "branch")
-                    .where("event.isActive = :isActive", { isActive: true })
-                    .andWhere("event.branchId = :branchId", { branchId: branchIdNum })
-                    .getMany();
-                
-                console.log('Method 2 - Query builder results:', queryBuilderEvents.length);
-                
-                // Method 3: Raw SQL for verification (fix column names)
-                const rawEvents = await this.eventRepository.query(
-                    `SELECT e.*, b.name as branch_name 
-                     FROM events e 
-                     LEFT JOIN branches b ON b.id = e.branch_id 
-                     WHERE e.branch_id = $1 AND e."isActive" = true`,
-                    [branchIdNum]
-                );
-                
-                console.log('Method 3 - Raw SQL results:', rawEvents.length);
-                console.log('Raw events:', rawEvents);
-                
-                // Use the events from Method 1 (repository find)
-                if (events.length === 0) {
-                    console.log('No events found for branchId:', branchIdNum);
-                    console.log('Available branches:');
-                    const allBranches = await this.branchRepository.find();
-                    console.log(allBranches.map(b => ({ id: b.id, name: b.name })));
-                }
-                
-            } else {
-                console.log('No branchId provided, fetching all events');
-                // Get all active events
-                events = await this.eventRepository.find({
-                    where: {
-                        isActive: true
-                    },
-                    relations: ['branch']
-                });
-                console.log('Total active events:', events.length);
             }
 
             // Calculate metrics from filtered events
@@ -105,10 +84,10 @@ export class DashboardController {
                 total_planned_orders: events.reduce((sum, e) => sum + (Number(e.plannedOrders) || 0), 0),
                 total_actual_orders: events.reduce((sum, e) => sum + (Number(e.actualOrders) || 0), 0),
                 upcoming_events: events.filter(e => {
-                    const startDate = new Date(e.startDate);
+                    const eventStartDate = new Date(e.startDate);
                     const now = new Date();
                     const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-                    return startDate >= now && startDate <= thirtyDaysFromNow;
+                    return eventStartDate >= now && eventStartDate <= thirtyDaysFromNow;
                 }).length
             };
 
@@ -132,7 +111,10 @@ export class DashboardController {
                 totalPlannedEnquiries: metrics.total_planned_enquiries,
                 totalActualEnquiries: metrics.total_actual_enquiries,
                 totalPlannedOrders: metrics.total_planned_orders,
-                totalActualOrders: metrics.total_actual_orders
+                totalActualOrders: metrics.total_actual_orders,
+                // Add debug info
+                dateFilter: startDate && endDate ? { startDate, endDate } : null,
+                branchFilter: branchId || null
             };
 
             console.log('Response data:', response_data);
@@ -206,7 +188,10 @@ export class DashboardController {
     async recentEvents(request: Request, response: Response) {
         try {
             const branchId = request.query.branchId as string;
-            console.log('Filtering recent events by branch:', { branchId });
+            const startDate = request.query.startDate as string;
+            const endDate = request.query.endDate as string;
+            
+            console.log('Filtering recent events by:', { branchId, startDate, endDate });
 
             let queryBuilder = this.eventRepository
                 .createQueryBuilder("event")
@@ -218,15 +203,30 @@ export class DashboardController {
                     "event.status",
                     "event.budget"
                 ])
-                .where("event.isActive = :isActive", { isActive: true })
-                .orderBy("event.startDate", "DESC")
-                .take(5);
+                .where("event.isActive = :isActive", { isActive: true });
 
+            // Add branch filter
             if (branchId && branchId !== 'all' && !isNaN(Number(branchId))) {
                 queryBuilder = queryBuilder.andWhere("event.branchId = :branchId", { branchId: Number(branchId) });
             }
 
-            const events = await queryBuilder.getMany();
+            // Add date filter
+            if (startDate && endDate) {
+                const start = new Date(startDate);
+                const end = new Date(endDate);
+                end.setHours(23, 59, 59, 999);
+                
+                queryBuilder = queryBuilder.andWhere("event.startDate BETWEEN :startDate AND :endDate", {
+                    startDate: start,
+                    endDate: end
+                });
+            }
+
+            const events = await queryBuilder
+                .orderBy("event.startDate", "DESC")
+                .take(5)
+                .getMany();
+
             return response.json(events);
         } catch (error) {
             console.error("Error in recentEvents endpoint:", error);

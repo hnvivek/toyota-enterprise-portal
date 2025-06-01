@@ -5,7 +5,7 @@ import { EventType } from '../models/EventType';
 import { User } from '../models/User';
 import { UserRole } from '../types/auth';
 import bcrypt from 'bcryptjs';
-import { Event } from '../models/Event';
+import { Event, EventStatus } from '../models/Event';
 
 const branches = [
   {
@@ -262,80 +262,142 @@ async function seedUsers(branches: Branch[]): Promise<User | null> {
 async function seedEvents(branches: Branch[], eventTypes: EventType[], user: User, products: Product[]) {
   const eventRepository = AppDataSource.getRepository(Event);
   
-  // Create sample events for each branch with different values
-  for (const branch of branches) {
-    // Values will vary based on branch region and type
-    const multiplier = branch.name === 'Digital' ? 1.5 : 
-                      branch.region.includes('South') ? 1.2 :
-                      branch.region.includes('East') ? 0.8 :
-                      branch.region.includes('Central') ? 1.0 : 0.9;
-
-    // Create Digital Campaign events - one for each product
-    const digitalProducts = products.slice(0, 4); // Glanza, Hyryder, Taisor, Rumion
+  // Get current date for realistic date generation
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth(); // 0-based (0 = January)
+  
+  // Helper function to generate random dates
+  const getRandomDate = (monthsBack: number, monthsForward: number) => {
+    const minMonthOffset = -monthsBack;
+    const maxMonthOffset = monthsForward;
+    const randomMonthOffset = Math.floor(Math.random() * (maxMonthOffset - minMonthOffset + 1)) + minMonthOffset;
     
-    for (const product of digitalProducts) {
-      await eventRepository.save({
-        title: `Digital Campaign - ${branch.name} - ${product.name}`,
-        description: `Q2 Digital Marketing Campaign for ${product.name} at ${branch.name}`,
-        startDate: new Date('2024-05-01'),
-        endDate: new Date('2024-05-30'),
-        location: branch.location,
-        status: 'approved',
-        budget: Math.round(120000 * multiplier), // Split budget per product
-        isPlanned: true,
-        enquiryTarget: Math.round(20 * multiplier),
-        orderTarget: Math.round(4 * multiplier),
-        plannedBudget: Math.round(120000 * multiplier),
-        actualBudget: Math.round(114000 * multiplier),
-        plannedEnquiries: Math.round(20 * multiplier),
-        actualEnquiries: Math.round(24 * multiplier),
-        plannedOrders: Math.round(4 * multiplier),
-        actualOrders: Math.round(5 * multiplier),
-        branch: branch,
-        branchId: branch.id,
-        organizer: user,
-        userId: user.id,
-        eventType: eventTypes[0], // Digital Lead Generation
-        isActive: true,
-        products: [product] // Single product per event
-      });
+    const year = currentYear;
+    const month = currentMonth + randomMonthOffset;
+    const day = Math.floor(Math.random() * 28) + 1; // 1-28 to avoid month overflow issues
+    
+    return new Date(year, month, day);
+  };
+
+  // Helper function to get random duration (1-30 days)
+  const getRandomDuration = () => Math.floor(Math.random() * 30) + 1;
+
+  // Helper function to get random status based on date
+  const getRandomStatus = (startDate: Date): EventStatus => {
+    if (startDate < now) {
+      // Past events - mostly completed, some approved
+      return Math.random() < 0.8 ? 'completed' : 'approved';
+    } else {
+      // Future events - mix of pending and approved
+      const futureStatuses: EventStatus[] = ['pending_gm', 'pending_marketing', 'approved', 'draft'];
+      return futureStatuses[Math.floor(Math.random() * futureStatuses.length)];
+    }
+  };
+
+  // Helper function to get random multiplier for budget/targets
+  const getRandomMultiplier = () => 0.5 + Math.random() * 1.5; // 0.5x to 2x
+
+  // Generate 60-80 random events across all branches and event types
+  const totalEvents = 65 + Math.floor(Math.random() * 16); // 65-80 events
+  
+  const eventTitles = [
+    'Q1 Digital Campaign', 'Q2 Marketing Push', 'Q3 Sales Drive', 'Q4 Festival Campaign',
+    'Summer Sale Event', 'Monsoon Special', 'Festival Bonanza', 'Year End Sale',
+    'New Model Launch', 'Test Drive Campaign', 'Corporate Event', 'Mall Display',
+    'Road Show', 'Customer Meet', 'Dealer Conference', 'Training Program',
+    'Service Campaign', 'Loyalty Program', 'Referral Drive', 'Trade-in Event'
+  ];
+
+  const locations = [
+    'City Center Mall', 'Phoenix Mall', 'Forum Mall', 'Brigade Road', 'Commercial Street',
+    'Whitefield Main Road', 'Electronic City', 'Banashankari', 'Jayanagar', 'Koramangala',
+    'HSR Layout', 'BTM Layout', 'Marathahalli', 'Sarjapur Road', 'Outer Ring Road',
+    'Hebbal', 'Yeshwantpur', 'Rajajinagar', 'Malleshwaram', 'Indiranagar'
+  ];
+
+  for (let i = 0; i < totalEvents; i++) {
+    // Random selections
+    const randomBranch = branches[Math.floor(Math.random() * branches.length)];
+    const randomEventType = eventTypes[Math.floor(Math.random() * eventTypes.length)];
+    const randomProducts = products
+      .sort(() => 0.5 - Math.random())
+      .slice(0, Math.floor(Math.random() * 3) + 1); // 1-3 products per event
+    
+    // Random date generation (6 months back to 3 months forward)
+    const startDate = getRandomDate(6, 3);
+    const endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + getRandomDuration());
+    
+    const status = getRandomStatus(startDate);
+    
+    // Random title and location
+    const titleBase = eventTitles[Math.floor(Math.random() * eventTitles.length)];
+    const randomLocation = Math.random() < 0.7 ? randomBranch.location : 
+                          locations[Math.floor(Math.random() * locations.length)];
+    
+    // Random budget and targets with variation
+    const baseBudget = 50000 + Math.random() * 400000; // 50K to 450K
+    const multiplier = getRandomMultiplier();
+    
+    const budget = Math.round(baseBudget * multiplier);
+    const enquiryTarget = Math.round((20 + Math.random() * 80) * multiplier); // 20-100 enquiries
+    const orderTarget = Math.round((3 + Math.random() * 15) * multiplier); // 3-18 orders
+    
+    // Planned values (slightly different from targets)
+    const plannedBudget = Math.round(budget * (0.9 + Math.random() * 0.2)); // 90%-110% of budget
+    const plannedEnquiries = Math.round(enquiryTarget * (0.8 + Math.random() * 0.4)); // 80%-120%
+    const plannedOrders = Math.round(orderTarget * (0.8 + Math.random() * 0.4)); // 80%-120%
+    
+    // Actual values (only for completed events)
+    let actualBudget: number | null = null;
+    let actualEnquiries: number | null = null;
+    let actualOrders: number | null = null;
+    
+    if (status === 'completed') {
+      actualBudget = Math.round(plannedBudget * (0.85 + Math.random() * 0.3)); // 85%-115% of planned
+      actualEnquiries = Math.round(plannedEnquiries * (0.7 + Math.random() * 0.6)); // 70%-130% of planned
+      actualOrders = Math.round(plannedOrders * (0.6 + Math.random() * 0.8)); // 60%-140% of planned
     }
 
-    // Create Exchange Mela events - one for each product
-    const exchangeProducts = products.slice(0, 3); // Glanza, Hyryder, Taisor
-    
-    for (const product of exchangeProducts) {
-      await eventRepository.save({
-        title: `Exchange Mela - ${branch.name} - ${product.name}`,
-        description: `Annual Exchange Mela for ${product.name} at ${branch.name}`,
-        startDate: new Date('2024-04-01'),
-        endDate: new Date('2024-04-15'),
-        location: branch.location,
-        status: 'completed',
-        budget: Math.round(267000 * multiplier), // Split budget per product
+    const productNames = randomProducts.map(p => p.name).join(' & ');
+    const title = `${titleBase} - ${randomBranch.name} - ${productNames}`;
+    const description = `${new Date().getFullYear()} ${randomEventType.name} for ${productNames} at ${randomBranch.name} branch`;
+
+    try {
+      const event = eventRepository.create({
+        title: title.length > 100 ? title.substring(0, 97) + '...' : title,
+        description,
+        startDate,
+        endDate,
+        location: randomLocation,
+        status,
+        budget,
         isPlanned: true,
-        enquiryTarget: Math.round(50 * multiplier),
-        orderTarget: Math.round(10 * multiplier),
-        plannedBudget: Math.round(267000 * multiplier),
-        actualBudget: Math.round(250000 * multiplier),
-        plannedEnquiries: Math.round(50 * multiplier),
-        actualEnquiries: Math.round(60 * multiplier),
-        plannedOrders: Math.round(10 * multiplier),
-        actualOrders: Math.round(12 * multiplier),
-        branch: branch,
-        branchId: branch.id,
+        enquiryTarget,
+        orderTarget,
+        plannedBudget,
+        actualBudget,
+        plannedEnquiries,
+        actualEnquiries,
+        plannedOrders,
+        actualOrders,
+        branch: randomBranch,
+        branchId: randomBranch.id,
         organizer: user,
         userId: user.id,
-        eventType: eventTypes[2], // Exchange Mela
+        eventType: randomEventType,
         isActive: true,
-        products: [product] // Single product per event
+        products: randomProducts
       });
+      
+      await eventRepository.save(event);
+    } catch (error) {
+      console.error(`Error creating event ${i + 1}:`, error);
     }
-
-    console.log(`Created events for branch: ${branch.name} with individual products assigned`);
   }
   
-  console.log('Created sample events with one product per event');
+  console.log(`Created ${totalEvents} randomized events across all branches with varied dates, statuses, and budgets`);
 }
 
 export async function seed() {

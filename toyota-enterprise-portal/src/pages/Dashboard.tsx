@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Grid,
@@ -8,8 +8,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
-  TableHead,
   TableRow,
   LinearProgress,
   Tooltip,
@@ -21,11 +19,10 @@ import {
   Select,
   MenuItem,
   SelectChangeEvent,
+  Chip,
 } from '@mui/material';
 import {
   Event as EventIcon,
-  People as PeopleIcon,
-  Business as BusinessIcon,
   CurrencyRupee as RupeeIcon,
   TrendingUp as TrendingUpIcon,
   TrendingDown as TrendingDownIcon,
@@ -38,7 +35,8 @@ import {
 } from '@mui/icons-material';
 import { api } from '../config/api';
 import { formatINR } from '../utils/format';
-import { useUser } from '../contexts/UserContext';
+import DateRangeFilter, { DateRange } from '../components/DateRangeFilter';
+import dayjs from 'dayjs';
 
 interface SummaryCardProps {
   title: string;
@@ -313,6 +311,11 @@ const Dashboard = () => {
   const [error, setError] = useState<string | null>(null);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [selectedBranch, setSelectedBranch] = useState<string>('all');
+  const [dateRange, setDateRange] = useState<DateRange>({
+    startDate: dayjs().startOf('month'),
+    endDate: dayjs().endOf('month'),
+    label: 'This Month'
+  });
 
   // Get the selected branch name
   const getSelectedBranchName = () => {
@@ -325,11 +328,18 @@ const Dashboard = () => {
     const branchId = event.target.value;
     setSelectedBranch(branchId);
     setSectionLoading(true);
-    await fetchDashboardData(branchId);
+    await fetchDashboardData(branchId, dateRange);
     setSectionLoading(false);
   };
 
-  const fetchDashboardData = async (branchId: string) => {
+  const handleDateRangeChange = async (newDateRange: DateRange) => {
+    setDateRange(newDateRange);
+    setSectionLoading(true);
+    await fetchDashboardData(selectedBranch, newDateRange);
+    setSectionLoading(false);
+  };
+
+  const fetchDashboardData = useCallback(async (branchId: string, currentDateRange: DateRange = dateRange) => {
     try {
       setLoading(true);
       setError(null);
@@ -340,9 +350,19 @@ const Dashboard = () => {
       }
       
       const headers = { Authorization: `Bearer ${token}` };
-      const branchParam = branchId === 'all' ? '' : `?branchId=${branchId}`;
+      
+      // Build query parameters
+      const params = new URLSearchParams();
+      if (branchId !== 'all') {
+        params.append('branchId', branchId);
+      }
+      params.append('startDate', currentDateRange.startDate.format('YYYY-MM-DD'));
+      params.append('endDate', currentDateRange.endDate.format('YYYY-MM-DD'));
+      
+      const queryString = params.toString();
+      const branchParam = queryString ? `?${queryString}` : '';
 
-      console.log('Fetching data for branch:', branchId);
+      console.log('Fetching data for:', { branchId, dateRange: currentDateRange });
       console.log('API URLs:', {
         summary: `${api.defaults.baseURL || 'http://localhost:8080/api'}/dashboard/summary${branchParam}`,
       });
@@ -371,7 +391,7 @@ const Dashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [dateRange]);
 
   const fetchBranches = async () => {
     try {
@@ -393,12 +413,12 @@ const Dashboard = () => {
     const initializeDashboard = async () => {
       await Promise.all([
         fetchBranches(),
-        fetchDashboardData('all')
+        fetchDashboardData('all', dateRange)
       ]);
     };
 
     initializeDashboard();
-  }, []);
+  }, [fetchDashboardData, dateRange]);
 
   if (loading) {
     return (
@@ -456,16 +476,26 @@ const Dashboard = () => {
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Typography variant="subtitle1" color="text.secondary" sx={{ fontWeight: 500 }}>
-            Viewing data for:
+            Filters:
           </Typography>
-          <FormControl sx={{ minWidth: 250 }}>
-            <InputLabel id="branch-select-label">Select Branch</InputLabel>
+          
+          {/* Date Range Filter */}
+          <DateRangeFilter
+            value={dateRange}
+            onChange={handleDateRangeChange}
+            size="small"
+          />
+          
+          {/* Branch Filter */}
+          <FormControl sx={{ minWidth: 200 }}>
+            <InputLabel id="branch-select-label">Branch</InputLabel>
             <Select
               labelId="branch-select-label"
               id="branch-select"
               value={selectedBranch}
-              label="Select Branch"
+              label="Branch"
               onChange={handleBranchChange}
+              size="small"
               sx={{
                 backgroundColor: 'background.paper',
                 '& .MuiOutlinedInput-notchedOutline': {
@@ -511,9 +541,25 @@ const Dashboard = () => {
       )}
 
       {/* Summary Section */}
-      <Typography variant="h5" gutterBottom sx={{ mb: 1.5, fontWeight: 700, color: 'primary.main' }}>
-        Summary - {getSelectedBranchName()}
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+        <Typography variant="h5" sx={{ fontWeight: 700, color: 'primary.main' }}>
+          Summary - {getSelectedBranchName()}
+        </Typography>
+        
+        {/* Active Filters Info */}
+        <Stack direction="row" spacing={1} alignItems="center">
+          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+            Showing events from {dateRange.startDate.format('MMM DD')} to {dateRange.endDate.format('MMM DD, YYYY')}
+          </Typography>
+          <Chip 
+            label="By Event Start Date" 
+            size="small" 
+            variant="outlined" 
+            color="info"
+            sx={{ fontSize: '0.65rem', height: 20 }}
+          />
+        </Stack>
+      </Box>
 
       {/* Summary Cards */}
       <Grid container spacing={2} sx={{ mb: 2 }}>
