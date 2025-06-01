@@ -20,6 +20,7 @@ import {
   Checkbox,
   Divider,
   Grid,
+  useTheme,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -63,7 +64,7 @@ import { Tag } from 'primereact/tag';
 import { ProgressSpinner } from 'primereact/progressspinner';
 import { Menu as PrimeMenu } from 'primereact/menu';
 import { styled } from '@mui/material/styles';
-import { useTheme } from '@mui/material/styles';
+import { InputNumber } from 'primereact/inputnumber';
 
 // PrimeReact CSS with custom styling
 import 'primereact/resources/themes/lara-light-indigo/theme.css';
@@ -81,6 +82,14 @@ import {
   Event 
 } from '../../services/eventService';
 import { alpha } from '@mui/material/styles';
+
+// Local interface for events with properly converted dates
+interface EventWithDates extends Omit<Event, 'startDate' | 'endDate' | 'createdAt' | 'updatedAt'> {
+  startDate: Date;
+  endDate: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 // Custom styled DataTable to match Material-UI theme
 const StyledDataTableWrapper = styled(Box)(({ theme }) => ({
@@ -133,6 +142,11 @@ const StyledDataTableWrapper = styled(Box)(({ theme }) => ({
       },
       '& .p-column-filter-menu-button': {
         color: theme.palette.primary.main,
+      },
+      '&:has(.p-calendar)': {
+        overflow: 'visible !important',
+        position: 'relative',
+        zIndex: 1000,
       },
     },
     '& .p-datatable-tbody > tr': {
@@ -283,6 +297,8 @@ const StyledDataTableWrapper = styled(Box)(({ theme }) => ({
     borderRadius: theme.shape.borderRadius,
     color: theme.palette.text.primary,
     boxShadow: theme.shadows[8],
+    position: 'fixed !important',
+    zIndex: '9999 !important',
   },
   '& .p-inputtext::placeholder': {
     color: theme.palette.text.secondary,
@@ -291,12 +307,80 @@ const StyledDataTableWrapper = styled(Box)(({ theme }) => ({
     borderRadius: theme.shape.borderRadius,
     fontWeight: 500,
   },
+  
+  // Comprehensive fix for calendar overflow in table headers
+  '& .p-datatable-header-cell': {
+    '&:has(.p-calendar)': {
+      overflow: 'visible !important',
+      position: 'relative !important',
+      zIndex: '1001 !important',
+    },
+  },
+  
+  // Additional table header overflow fix
+  '& .p-datatable-thead th': {
+    '&:has(.p-calendar), &:has(.p-calendar-w-btn)': {
+      overflow: 'visible !important',
+      position: 'relative !important',
+      zIndex: '1001 !important',
+    },
+  },
+  
+  // Ensure the calendar input container doesn't clip
+  '& .p-calendar': {
+    position: 'relative !important',
+    '& .p-calendar-w-btn': {
+      position: 'relative !important',
+    },
+  },
+  
+  // Force calendar panel positioning
+  '& .p-calendar-panel.p-component': {
+    position: 'fixed !important',
+    zIndex: '9999 !important',
+    transform: 'none !important',
+    marginTop: '4px !important',
+  },
+  
+  // Custom calendar panel styling
+  '& .custom-calendar-panel': {
+    '& .p-datepicker-calendar': {
+      '& td': {
+        padding: '4px',
+        textAlign: 'center',
+        width: '36px',
+        height: '36px',
+        verticalAlign: 'middle',
+      },
+      '& td > span': {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '100%',
+        height: '100%',
+        fontSize: '0.85rem',
+        borderRadius: '4px',
+        transition: 'all 0.2s ease',
+      },
+      '& .p-datepicker-weekheader': {
+        textAlign: 'center',
+        fontWeight: 600,
+        padding: '8px 4px',
+        fontSize: '0.8rem',
+      },
+      '& .p-datepicker-weeknumber': {
+        textAlign: 'center',
+        fontWeight: 500,
+        color: theme.palette.text.secondary,
+      },
+    },
+  },
 }));
 
 const Events = () => {
   const navigate = useNavigate();
-  const [events, setEvents] = useState<Event[]>([]);
-  const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
+  const [events, setEvents] = useState<EventWithDates[]>([]);
+  const [filteredEvents, setFilteredEvents] = useState<EventWithDates[]>([]);
   const [filterOptions, setFilterOptions] = useState<FilterOptions | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -311,6 +395,7 @@ const Events = () => {
     status: { operator: FilterOperator.OR, constraints: [{ value: null, matchMode: FilterMatchMode.EQUALS }] },
     'eventType.name': { value: null, matchMode: FilterMatchMode.IN },
     startDate: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }] },
+    endDate: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }] },
     budget: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.GREATER_THAN_OR_EQUAL_TO }] },
     actualEnquiries: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.GREATER_THAN_OR_EQUAL_TO }] },
     actualOrders: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.GREATER_THAN_OR_EQUAL_TO }] },
@@ -321,7 +406,8 @@ const Events = () => {
     title: true,        // Essential - Event name and description
     branch: true,       // Important - Location context
     status: true,       // Critical - Current state
-    startDate: true,    // Important - When event happens
+    startDate: true,    // Important - When event starts
+    endDate: true,      // Important - When event ends
     location: false,    // Secondary - Can be hidden initially
     budget: false,      // Secondary - Financial info
     eventType: false,   // Secondary - Category info
@@ -358,7 +444,7 @@ const Events = () => {
   }, []);
 
   // Check if user can edit the event
-  const canEditEvent = (event: Event) => {
+  const canEditEvent = (event: EventWithDates) => {
     if (!currentUser) return false;
     if (currentUser.role === 'admin') return true;
     
@@ -382,7 +468,7 @@ const Events = () => {
   };
 
   // Check if user can delete the event
-  const canDeleteEvent = (event: Event) => {
+  const canDeleteEvent = (event: EventWithDates) => {
     if (!currentUser) return false;
     if (currentUser.role === 'admin') return true;
     
@@ -431,8 +517,18 @@ const Events = () => {
       setLoading(true);
       setError(null);
       const data = await eventService.getEvents({ page: 1, limit: 1000 }); // Get all events for client-side operations
-      setEvents(data.events);
-      setFilteredEvents(data.events);
+      
+      // Convert string dates to Date objects for proper PrimeReact date filtering
+      const eventsWithDates: EventWithDates[] = data.events.map(event => ({
+        ...event,
+        startDate: new Date(event.startDate),
+        endDate: new Date(event.endDate),
+        createdAt: new Date(event.createdAt),
+        updatedAt: new Date(event.updatedAt)
+      }));
+      
+      setEvents(eventsWithDates);
+      setFilteredEvents(eventsWithDates);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error fetching events');
       console.error('Error fetching events:', err);
@@ -560,10 +656,19 @@ const Events = () => {
       status: { operator: FilterOperator.OR, constraints: [{ value: null, matchMode: FilterMatchMode.EQUALS }] },
       'eventType.name': { value: null, matchMode: FilterMatchMode.IN },
       startDate: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }] },
+      endDate: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }] },
       budget: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.GREATER_THAN_OR_EQUAL_TO }] },
       actualEnquiries: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.GREATER_THAN_OR_EQUAL_TO }] },
       actualOrders: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.GREATER_THAN_OR_EQUAL_TO }] },
     } as any);
+  };
+
+  // Helper function to get actual cost (actual spent if available, otherwise planned budget)
+  const getActualCost = (event: EventWithDates) => {
+    // Use actualBudget if it exists and is greater than 0, otherwise use planned budget
+    return (event as any).actualBudget && (event as any).actualBudget > 0 
+      ? (event as any).actualBudget 
+      : event.budget || 0;
   };
 
   // Helper function to get filtered data from DataTable
@@ -583,15 +688,17 @@ const Events = () => {
     const filteredData = getFilteredData();
     
     // Prepare CSV data with null values converted to 0 for numeric fields
-    const csvData = filteredData.map((event: Event) => ({
+    const csvData = filteredData.map((event: EventWithDates) => ({
       'Title': event.title || '',
       'Description': event.description || '',
       'Branch': event.branch?.name || '',
       'Location': event.location || '',
       'Status': event.status || '',
-      'Start Date': new Date(event.startDate).toLocaleDateString(),
-      'End Date': new Date(event.endDate).toLocaleDateString(),
-      'Budget': event.budget || 0,
+      'Start Date': event.startDate.toLocaleDateString(),
+      'End Date': event.endDate.toLocaleDateString(),
+      'Planned Budget': event.budget || 0,
+      'Actual Spent': (event as any).actualBudget || 0,
+      'Final Cost': getActualCost(event),
       'Event Type': event.eventType?.name || 'No Type',
       'Products': event.products?.map((p: any) => p.name).join(', ') || 'None',
       'Planned Enquiries': event.plannedEnquiries || 0,
@@ -669,9 +776,13 @@ const Events = () => {
         doc.text('Report Summary', 15, 45);
         
         // Calculate totals first
-        const totalBudget = filteredData.reduce((sum, event) => {
+        const totalPlannedBudget = filteredData.reduce((sum, event) => {
           const budget = Number(event.budget) || 0;
           return sum + budget;
+        }, 0);
+        const totalActualSpent = filteredData.reduce((sum, event) => {
+          const actualCost = getActualCost(event);
+          return sum + actualCost;
         }, 0);
         const totalPlannedEnq = filteredData.reduce((sum, event) => sum + (event.plannedEnquiries || 0), 0);
         const totalActualEnq = filteredData.reduce((sum, event) => sum + (event.actualEnquiries || 0), 0);
@@ -679,15 +790,18 @@ const Events = () => {
         const totalActualOrd = filteredData.reduce((sum, event) => sum + (event.actualOrders || 0), 0);
         
         // Format budget display cleanly
-        const budgetFormatted = totalBudget > 0 ? 
-          `Rs. ${totalBudget.toLocaleString('en-IN')}` : 'Rs. 0';
+        const plannedBudgetFormatted = totalPlannedBudget > 0 ? 
+          `Rs. ${totalPlannedBudget.toLocaleString('en-IN')}` : 'Rs. 0';
+        const actualSpentFormatted = totalActualSpent > 0 ? 
+          `Rs. ${totalActualSpent.toLocaleString('en-IN')}` : 'Rs. 0';
         
         // SECTION 1: Basic Information
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
         doc.text(`Generated: ${new Date().toLocaleString()}`, 15, 55);
         doc.text(`Total Events: ${filteredData.length}`, 15, 62);
-        doc.text(`Total Budget: ${budgetFormatted}`, 15, 69);
+        doc.text(`Planned Budget: ${plannedBudgetFormatted}`, 15, 69);
+        doc.text(`Actual Spent: ${actualSpentFormatted}`, 15, 76);
         
         // SECTION 2: Performance Metrics (with visual separation)
         // Add a subtle line separator
@@ -721,21 +835,22 @@ const Events = () => {
         doc.text(`Planned: ${totalPlannedOrd.toLocaleString()}`, 220, 62);
         doc.text(`Actual: ${totalActualOrd.toLocaleString()} (${orderPerformance}%)`, 220, 68);
         
-        // Prepare table data with clean formatting
+        // Table headers updated to include both planned and actual costs
         const tableHeaders = [
           'S.No', 'Event Title', 'Branch', 'Status', 'Start Date', 'End Date', 
-          'Location', 'Budget', 'Event Type', 'Plan Enq', 'Act Enq', 'Plan Ord', 'Act Ord'
+          'Location', 'Plan Budget', 'Act Spent', 'Event Type', 'Plan Enq', 'Act Enq', 'Plan Ord', 'Act Ord'
         ];
         
-        const tableData = filteredData.map((event: Event, index: number) => [
+        const tableData = filteredData.map((event: EventWithDates, index: number) => [
           (index + 1).toString(),
           event.title || '',
           event.branch?.name || '',
           event.status || '',
-          new Date(event.startDate).toLocaleDateString() || '',
-          new Date(event.endDate).toLocaleDateString() || '',
+          event.startDate.toLocaleDateString() || '',
+          event.endDate.toLocaleDateString() || '',
           event.location || '',
           formatINR(event.budget || 0).replace('₹', 'Rs.'),
+          formatINR((event as any).actualBudget || 0).replace('₹', 'Rs.'),
           (event.eventType?.name || 'N/A').substring(0, 15), // Truncate long event type names
           (event.plannedEnquiries || 0).toString(),
           (event.actualEnquiries || 0).toString(),
@@ -774,19 +889,20 @@ const Events = () => {
                 halign: 'center'
               },
               columnStyles: {
-                0: { cellWidth: 12, halign: 'center' }, // S.No
-                1: { cellWidth: 38 }, // Event Title - increased width
-                2: { cellWidth: 18 }, // Branch
-                3: { cellWidth: 18, halign: 'center' }, // Status
-                4: { cellWidth: 18, halign: 'center' }, // Start Date
-                5: { cellWidth: 18, halign: 'center' }, // End Date
-                6: { cellWidth: 22 }, // Location
-                7: { cellWidth: 20, halign: 'right' }, // Budget
-                8: { cellWidth: 25 }, // Event Type - increased width
-                9: { cellWidth: 14, halign: 'center' }, // Plan Enq
-                10: { cellWidth: 14, halign: 'center' }, // Act Enq
-                11: { cellWidth: 14, halign: 'center' }, // Plan Ord
-                12: { cellWidth: 14, halign: 'center' } // Act Ord
+                0: { cellWidth: 12, halign: 'center' }, // S.No - restored
+                1: { cellWidth: 45 }, // Event Title - increased to use space
+                2: { cellWidth: 20 }, // Branch - increased
+                3: { cellWidth: 18, halign: 'center' }, // Status - increased
+                4: { cellWidth: 18, halign: 'center' }, // Start Date - increased
+                5: { cellWidth: 18, halign: 'center' }, // End Date - increased
+                6: { cellWidth: 25 }, // Location - increased
+                7: { cellWidth: 25, halign: 'right' }, // Planned Budget - increased
+                8: { cellWidth: 25, halign: 'right' }, // Actual Spent - increased
+                9: { cellWidth: 28 }, // Event Type - increased
+                10: { cellWidth: 18, halign: 'center' }, // Plan Enq - increased
+                11: { cellWidth: 18, halign: 'center' }, // Act Enq - increased
+                12: { cellWidth: 18, halign: 'center' }, // Plan Ord - increased
+                13: { cellWidth: 18, halign: 'center' } // Act Ord - increased
               },
               alternateRowStyles: {
                 fillColor: [245, 245, 245]
@@ -811,10 +927,10 @@ const Events = () => {
         } catch (error) {
           console.error('autoTable failed, using manual table creation:', error);
           
-          // Manual table creation as fallback with adjusted widths
+          // Manual table creation as fallback with adjusted widths for both budget columns
           let currentY = 90;
           const rowHeight = 6;
-          const colWidths = [12, 38, 18, 18, 18, 18, 22, 20, 25, 14, 14, 14, 14]; // Adjusted widths
+          const colWidths = [12, 45, 20, 18, 18, 18, 25, 20, 20, 28, 12, 12, 12, 12]; // Better utilization of space - total 274
           let currentX = 8;
           
           // Draw headers
@@ -847,9 +963,9 @@ const Events = () => {
             }
             
             row.forEach((cell, colIndex) => {
-              const maxLength = colIndex === 1 ? 25 : colIndex === 8 ? 15 : 20; // Different limits for different columns
+              const maxLength = colIndex === 1 ? 30 : colIndex === 9 ? 18 : colIndex === 6 ? 18 : 15; // Increased limits for better space usage
               const text = cell.toString().substring(0, maxLength);
-              const align = [0, 3, 4, 5, 7, 9, 10, 11, 12].includes(colIndex) ? 'center' : 'left';
+              const align = [0, 3, 4, 5, 7, 8, 10, 11, 12, 13].includes(colIndex) ? 'center' : 'left';
               const x = align === 'center' ? currentX + colWidths[colIndex]/2 : currentX + 2;
               
               doc.text(text, x, currentY + 4, { align: align as any });
@@ -901,15 +1017,17 @@ const Events = () => {
       
       // Create worksheet with proper column names
       const worksheet = xlsx.utils.json_to_sheet(
-        filteredData.map((event: Event) => ({
+        filteredData.map((event: EventWithDates) => ({
           'Title': event.title,
           'Description': event.description,
           'Branch': event.branch.name,
           'Location': event.location,
           'Status': event.status,
-          'Start Date': new Date(event.startDate).toLocaleDateString(),
-          'End Date': new Date(event.endDate).toLocaleDateString(),
-          'Budget': event.budget,
+          'Start Date': event.startDate.toLocaleDateString(),
+          'End Date': event.endDate.toLocaleDateString(),
+          'Planned Budget': event.budget,
+          'Actual Spent': (event as any).actualBudget || 0,
+          'Final Cost': getActualCost(event),
           'Event Type': event.eventType?.name || 'No Type',
           'Products': event.products?.map((p: any) => p.name).join(', ') || 'None',
           'Planned Enquiries': event.plannedEnquiries || 0,
@@ -934,54 +1052,29 @@ const Events = () => {
   };
 
   // Column templates - Optimized for space efficiency
-  const eventDetailsTemplate = (rowData: Event) => (
-    <Box sx={{ py: 0.25, position: 'relative' }}>
-      {rowData.isNew && (
-        <Box
-          sx={{
-            position: 'absolute',
-            top: 2,
-            left: -8,
-            width: 6,
-            height: 6,
-            borderRadius: '50%',
-            backgroundColor: 'error.main',
-            zIndex: 1,
-          }}
-        />
-      )}
-      <Typography variant="subtitle2" fontWeight="600" sx={{ fontSize: '0.75rem', lineHeight: 1.1, mb: 0.125 }}>
+  const eventDetailsTemplate = (rowData: EventWithDates) => (
+    <Box sx={{ py: 0.25 }}>
+      <Typography variant="body2" fontWeight="600" sx={{ fontSize: '0.75rem', lineHeight: 1.1, mb: 0.125, color: 'text.primary' }}>
         {rowData.title}
       </Typography>
-      <Typography 
-        variant="caption" 
-        color="text.secondary" 
-        sx={{ 
-          fontSize: '0.65rem',
-          display: '-webkit-box',
-          WebkitLineClamp: 1,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
-          lineHeight: 1.1
-        }}
-      >
-        {rowData.description}
+      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem', lineHeight: 1 }}>
+        {rowData.description ? `📄 ${rowData.description.substring(0, 40)}${rowData.description.length > 40 ? '...' : ''}` : '📝 No description'}
       </Typography>
     </Box>
   );
 
-  const branchTemplate = (rowData: Event) => (
+  const branchTemplate = (rowData: EventWithDates) => (
     <Box sx={{ py: 0.25 }}>
       <Typography variant="body2" fontWeight="500" sx={{ fontSize: '0.75rem', lineHeight: 1.1, mb: 0.125 }}>
-        {rowData.branch.name}
+        {rowData.branch?.name}
       </Typography>
       <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem', lineHeight: 1 }}>
-        📍 {rowData.branch.location}
+        🏢 Branch
       </Typography>
     </Box>
   );
 
-  const statusTemplate = (rowData: Event) => {
+  const statusTemplate = (rowData: EventWithDates) => {
     const status = rowData.status.toLowerCase();
     const getStatusProps = () => {
       switch (status) {
@@ -1015,9 +1108,9 @@ const Events = () => {
     );
   };
 
-  const dateTemplate = (rowData: Event) => {
-    const startDate = new Date(rowData.startDate);
-    const endDate = new Date(rowData.endDate);
+  const dateTemplate = (rowData: EventWithDates) => {
+    // Date is already a Date object, no conversion needed
+    const startDate = rowData.startDate;
     const isToday = startDate.toDateString() === new Date().toDateString();
     const isPast = startDate < new Date();
     
@@ -1029,20 +1122,39 @@ const Events = () => {
           sx={{ 
             fontSize: '0.75rem', 
             lineHeight: 1.1,
-            mb: 0.125,
             color: isToday ? 'primary.main' : isPast ? 'text.secondary' : 'text.primary'
           }}
         >
-          {isToday ? '🔥 Today' : startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-        </Typography>
-        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem', lineHeight: 1 }}>
-          to {endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          {isToday ? '🔥 Today' : startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
         </Typography>
       </Box>
     );
   };
 
-  const compactLocationTemplate = (rowData: Event) => (
+  const endDateTemplate = (rowData: EventWithDates) => {
+    // Date is already a Date object, no conversion needed
+    const endDate = rowData.endDate;
+    const isToday = endDate.toDateString() === new Date().toDateString();
+    const isPast = endDate < new Date();
+    
+    return (
+      <Box sx={{ py: 0.25 }}>
+        <Typography 
+          variant="body2" 
+          fontWeight="500" 
+          sx={{ 
+            fontSize: '0.75rem', 
+            lineHeight: 1.1,
+            color: isToday ? 'primary.main' : isPast ? 'text.secondary' : 'text.primary'
+          }}
+        >
+          {isToday ? '🔥 Today' : endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+        </Typography>
+      </Box>
+    );
+  };
+
+  const compactLocationTemplate = (rowData: EventWithDates) => (
     <Typography 
       variant="body2" 
       sx={{ 
@@ -1056,22 +1168,33 @@ const Events = () => {
     </Typography>
   );
 
-  const budgetTemplate = (rowData: Event) => (
-    <Typography 
-      variant="body2" 
-      fontWeight="600"
-      sx={{ 
-        fontSize: '0.75rem',
-        color: 'success.main',
-        fontFamily: 'monospace',
-        lineHeight: 1.1,
-      }}
-    >
-      {formatINR(rowData.budget)}
-    </Typography>
-  );
+  const budgetTemplate = (rowData: EventWithDates) => {
+    const actualCost = getActualCost(rowData);
+    const isActual = (rowData as any).actualBudget && (rowData as any).actualBudget > 0;
+    
+    return (
+      <Box sx={{ py: 0.25 }}>
+        <Typography 
+          variant="body2" 
+          fontWeight="600"
+          sx={{ 
+            fontSize: '0.75rem',
+            color: isActual ? 'success.main' : 'warning.main',
+            fontFamily: 'monospace',
+            lineHeight: 1.1,
+            mb: 0.125
+          }}
+        >
+          {formatINR(actualCost)}
+        </Typography>
+        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem', lineHeight: 1 }}>
+          💰 {isActual ? 'Actual' : 'Planned'}
+        </Typography>
+      </Box>
+    );
+  };
 
-  const compactProductsTemplate = (rowData: Event) => {
+  const compactProductsTemplate = (rowData: EventWithDates) => {
     const products = rowData.products || [];
     
     return (
@@ -1095,7 +1218,7 @@ const Events = () => {
     );
   };
 
-  const eventTypeTemplate = (rowData: Event) => (
+  const eventTypeTemplate = (rowData: EventWithDates) => (
     <Box sx={{ py: 0.25 }}>
       <Typography variant="body2" fontWeight="500" sx={{ fontSize: '0.75rem', lineHeight: 1.1, mb: 0.125 }}>
         {rowData.eventType?.name || 'No Type'}
@@ -1107,7 +1230,7 @@ const Events = () => {
   );
 
   // Planned vs Actual Enquiries Template
-  const enquiriesMetricsTemplate = (rowData: Event) => {
+  const enquiriesMetricsTemplate = (rowData: EventWithDates) => {
     const planned = rowData.plannedEnquiries || 0;
     const actual = rowData.actualEnquiries || 0;
     const percentage = planned > 0 ? Math.round((actual / planned) * 100) : 0;
@@ -1145,7 +1268,7 @@ const Events = () => {
   };
 
   // Planned vs Actual Orders Template
-  const ordersMetricsTemplate = (rowData: Event) => {
+  const ordersMetricsTemplate = (rowData: EventWithDates) => {
     const planned = rowData.plannedOrders || 0;
     const actual = rowData.actualOrders || 0;
     const percentage = planned > 0 ? Math.round((actual / planned) * 100) : 0;
@@ -1262,13 +1385,61 @@ const Events = () => {
   // Orders filter template
   const ordersFilterTemplate = (options: any) => {
     return (
-      <InputText
-        value={options.value}
-        onChange={(e) => options.filterCallback(e.target.value)}
+      <InputNumber 
+        value={options.value ? Number(options.value) : null} 
+        onChange={(e) => options.filterCallback(e.value)} 
         placeholder="Min orders"
+        min={0}
+        showButtons={false}
+      />
+    );
+  };
+
+  // Custom date filter templates
+  const startDateFilterTemplate = (options: any) => {
+    return (
+      <Calendar
+        value={options.value}
+        onChange={(e) => options.filterCallback(e.value)}
+        placeholder="Select date"
+        dateFormat="dd/mm/yy"
+        showIcon
+        showOnFocus={false}
         className="p-column-filter"
-        style={{ minWidth: '8rem' }}
-        type="number"
+        style={{ width: '100%' }}
+        appendTo={document.body}
+        panelStyle={{ 
+          marginTop: '70px',
+          zIndex: 9999,
+          boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+          position: 'absolute'
+        }}
+        monthNavigator
+        yearNavigator
+      />
+    );
+  };
+
+  const endDateFilterTemplate = (options: any) => {
+    return (
+      <Calendar
+        value={options.value}
+        onChange={(e) => options.filterCallback(e.value)}
+        placeholder="Select date"
+        dateFormat="dd/mm/yy"
+        showIcon
+        showOnFocus={false}
+        className="p-column-filter"
+        style={{ width: '100%' }}
+        appendTo={document.body}
+        panelStyle={{ 
+          marginTop: '70px',
+          zIndex: 9999,
+          boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+          position: 'absolute'
+        }}
+        monthNavigator
+        yearNavigator
       />
     );
   };
@@ -1627,21 +1798,38 @@ const Events = () => {
                   body={dateTemplate}
                   sortable 
                   filter 
-                  filterElement={(options) => <Calendar value={options.value} onChange={(e) => options.filterCallback(e.value)} dateFormat="mm/dd/yy" placeholder="mm/dd/yyyy" />}
+                  dataType="date"
+                  filterElement={startDateFilterTemplate}
+                  filterMatchModeOptions={[
+                    { label: 'Date is', value: FilterMatchMode.DATE_IS },
+                    { label: 'Date is not', value: FilterMatchMode.DATE_IS_NOT },
+                    { label: 'Date is before', value: FilterMatchMode.DATE_BEFORE },
+                    { label: 'Date is after', value: FilterMatchMode.DATE_AFTER }
+                  ]}
+                  showFilterMatchModes={true}
                   style={{ minWidth: '7rem', maxWidth: '9rem' }}
                   headerStyle={{ fontWeight: 600 }}
                 />
               )}
               
-              {visibleColumns.startDate && (
+              {visibleColumns.endDate && (
                 <Column 
                   field="endDate" 
                   header="End Date"
-                  body={(rowData) => new Date(rowData.endDate).toLocaleDateString()}
+                  body={endDateTemplate}
                   sortable 
+                  filter 
+                  dataType="date"
+                  filterElement={endDateFilterTemplate}
+                  filterMatchModeOptions={[
+                    { label: 'Date is', value: FilterMatchMode.DATE_IS },
+                    { label: 'Date is not', value: FilterMatchMode.DATE_IS_NOT },
+                    { label: 'Date is before', value: FilterMatchMode.DATE_BEFORE },
+                    { label: 'Date is after', value: FilterMatchMode.DATE_AFTER }
+                  ]}
+                  showFilterMatchModes={true}
                   style={{ minWidth: '6rem', maxWidth: '8rem' }}
                   headerStyle={{ fontWeight: 600 }}
-                  hidden={true}
                 />
               )}
               

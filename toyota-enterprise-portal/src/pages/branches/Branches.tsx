@@ -42,6 +42,17 @@ interface Branch {
 }
 
 const regions = [
+  // Bangalore specific regions
+  'Bangalore South',
+  'Bangalore East',
+  'Bangalore West',
+  'Bangalore North',
+  'Bangalore Central',
+  
+  // Special regions
+  'Digital Marketing',
+  
+  // Generic directional regions
   'North',
   'South', 
   'East',
