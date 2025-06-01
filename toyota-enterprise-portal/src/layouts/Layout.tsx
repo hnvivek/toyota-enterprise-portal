@@ -199,7 +199,14 @@ const Layout = () => {
 
       // Navigate to related page if actionUrl exists
       if (notification.actionUrl) {
-        navigate(notification.actionUrl);
+        // Check if it's an external URL
+        if (notification.actionUrl.startsWith('http://') || notification.actionUrl.startsWith('https://')) {
+          // Open external links in new tab
+          window.open(notification.actionUrl, '_blank', 'noopener,noreferrer');
+        } else {
+          // Use internal navigation for app routes
+          navigate(notification.actionUrl);
+        }
       }
     } catch (error) {
       console.error('Error marking notification as read:', error);
@@ -308,6 +315,7 @@ const Layout = () => {
       { text: 'Users', icon: <PeopleIcon />, path: '/users', badge: null },
       { text: 'Branches', icon: <BusinessIcon />, path: '/branches', badge: null },
       { text: 'Products', icon: <ProductIcon />, path: '/products', badge: null },
+      { text: 'Notification Manager', icon: <NotificationsIcon />, path: '/admin/notifications', badge: null },
     ] : [])
   ];
 
@@ -794,7 +802,7 @@ const Layout = () => {
             overflow: 'visible',
             filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.32))',
             mt: 1.5,
-            maxWidth: 360,
+            maxWidth: 400,
             maxHeight: 400,
             '&:before': {
               content: '""',
@@ -862,9 +870,10 @@ const Layout = () => {
                         sx={{ 
                           fontWeight: !notification.isRead ? 600 : 400,
                           fontSize: '0.875rem',
-                          mb: 0.5
+                          mb: 0.5,
+                          wordWrap: 'break-word',
+                          whiteSpace: 'normal'
                         }}
-                        noWrap
                       >
                         {notification.title}
                       </Typography>
@@ -875,7 +884,9 @@ const Layout = () => {
                           display: 'block',
                           fontSize: '0.75rem',
                           lineHeight: 1.3,
-                          mb: 0.5
+                          mb: 0.5,
+                          wordWrap: 'break-word',
+                          whiteSpace: 'normal'
                         }}
                       >
                         {notification.message}

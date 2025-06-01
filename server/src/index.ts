@@ -13,6 +13,7 @@ import eventTypeRoutes from './routes/eventTypes';
 import dashboardRoutes from './routes/dashboard';
 import notificationRoutes from './routes/notifications';
 import statsRoutes from './routes/stats';
+import { notificationService } from './services/notificationService';
 
 dotenv.config();
 
@@ -77,17 +78,87 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-const PORT = process.env.PORT || 8080;
+// Scheduled notification tasks
+const scheduleNotificationTasks = () => {
+  // Run event reminders every day at 9 AM
+  const runEventReminders = () => {
+    const now = new Date();
+    if (now.getHours() === 9 && now.getMinutes() === 0) {
+      console.log('Running scheduled event reminders...');
+      notificationService.createEventReminders().catch(error => {
+        console.error('Error running event reminders:', error);
+      });
+    }
+  };
+
+  // Run approval reminders every 6 hours during business hours
+  const runApprovalReminders = () => {
+    const now = new Date();
+    const hour = now.getHours();
+    const minute = now.getMinutes();
+    
+    // Run at 9 AM, 1 PM, and 5 PM (business hours)
+    if (minute === 0 && [9, 13, 17].includes(hour)) {
+      console.log('Running scheduled approval reminders...');
+      notificationService.createApprovalReminders().catch(error => {
+        console.error('Error running approval reminders:', error);
+      });
+    }
+  };
+
+  // Run notification cleanup daily at 2 AM
+  const runNotificationCleanup = () => {
+    const now = new Date();
+    if (now.getHours() === 2 && now.getMinutes() === 0) {
+      console.log('Running scheduled notification cleanup...');
+      
+      // First mark old notifications for cleanup
+      notificationService.markOldNotificationsForCleanup()
+        .then(marked => {
+          console.log(`Marked ${marked} old notifications for cleanup`);
+          
+          // Then perform the actual cleanup
+          return notificationService.performCleanup();
+        })
+        .then(result => {
+          console.log('Notification cleanup completed:', result);
+        })
+        .catch(error => {
+          console.error('Error running notification cleanup:', error);
+        });
+    }
+  };
+
+  // Check every minute for scheduled tasks
+  setInterval(() => {
+    try {
+      runEventReminders();
+      runApprovalReminders();
+      runNotificationCleanup();
+    } catch (error) {
+      console.error('Error in scheduled notification tasks:', error);
+    }
+  }, 60000); // Check every minute
+
+  console.log('Notification scheduling system started');
+  console.log('📅 Event reminders: Daily at 9:00 AM');
+  console.log('⏰ Approval reminders: Every 6 hours (9 AM, 1 PM, 5 PM)');
+  console.log('🧹 Notification cleanup: Daily at 2:00 AM');
+};
+
+// Start the server
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  
+  // Start notification scheduler
+  scheduleNotificationTasks();
+});
 
 // Initialize database connection
 AppDataSource.initialize()
   .then(() => {
     console.log('Database connected successfully');
-    
-    // Start server after database connection is established
-    app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
-    });
   })
   .catch((error: Error) => {
     console.error('Error connecting to database:', error);

@@ -8,6 +8,7 @@ import { EventAttachment } from '../models/EventAttachment';
 import { BudgetAllocation } from '../models/BudgetAllocation';
 import { EventComment } from '../models/EventComment';
 import { Notification } from '../models/Notification';
+import { RecurringReminder } from '../models/RecurringReminder';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -18,7 +19,7 @@ export const AppDataSource = new DataSource({
   database: process.env.DB_NAME || 'toyota_enterprise_portal',
   synchronize: true,
   logging: true,
-  entities: [Event, Branch, Product, EventType, User, EventAttachment, BudgetAllocation, EventComment, Notification],
+  entities: [Event, Branch, Product, EventType, User, EventAttachment, BudgetAllocation, EventComment, Notification, RecurringReminder],
   subscribers: [],
   migrations: []
 }); 

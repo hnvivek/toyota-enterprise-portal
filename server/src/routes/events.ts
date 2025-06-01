@@ -12,6 +12,8 @@ import { User } from '../models/User';
 import fs from 'fs';
 import path from 'path';
 import { EventComment } from '../models/EventComment';
+import { notificationService } from '../services/notificationService';
+import { NotificationType } from '../models/Notification';
 
 const router = Router();
 
@@ -92,7 +94,7 @@ router.get('/', auth, async (req: Request, res: Response) => {
     const {
       page = 1,
       limit = 10,
-      sortBy = 'startDate',
+      sortBy = 'updatedAt',
       sortOrder = 'DESC',
       status,
       branchId,
@@ -670,6 +672,14 @@ router.patch('/:id/status', auth, async (req: Request, res: Response) => {
       await commentRepository.save(eventComment);
     }
 
+    // CREATE NOTIFICATIONS FOR STATUS CHANGES
+    try {
+      await createStatusChangeNotifications(event, oldStatus, status, currentUser, comment);
+    } catch (notificationError) {
+      console.error('Error creating notifications:', notificationError);
+      // Don't fail the status update if notifications fail
+    }
+
     console.log(`Event ${id} status updated from ${oldStatus} to ${status} by user ${userId}`);
     res.json({ 
       message: 'Event status updated successfully', 
@@ -1128,5 +1138,79 @@ router.post('/demo/reset-last-seen', auth, async (req: Request, res: Response) =
     res.status(500).json({ message: 'Error resetting last seen' });
   }
 });
+
+// Helper function to create notifications for status changes
+async function createStatusChangeNotifications(event: Event, oldStatus: string, newStatus: string, actor: User, comment?: string) {
+  const eventCreatorId = event.organizer.id;
+  const actorName = actor.username;
+  
+  // Personal Status Updates for Event Creator
+  if (newStatus === 'approved') {
+    await notificationService.createNotification(
+      eventCreatorId,
+      NotificationType.EVENT_APPROVED,
+      '🎉 Event Approved!',
+      `Great news! Your event "${event.title}" has been approved${comment ? ` with comment: "${comment}"` : ''}.`,
+      event.id,
+      'event',
+      `/events/${event.id}`
+    );
+  } else if (newStatus === 'rejected') {
+    await notificationService.createNotification(
+      eventCreatorId,
+      NotificationType.EVENT_REJECTED,
+      '❌ Event Needs Revision',
+      `Your event "${event.title}" was rejected by ${actorName}${comment ? ` with feedback: "${comment}"` : '. Please review and revise.'}.`,
+      event.id,
+      'event',
+      `/events/${event.id}`
+    );
+  } else if (newStatus === 'pending_marketing' && oldStatus === 'pending_gm') {
+    await notificationService.createNotification(
+      eventCreatorId,
+      NotificationType.EVENT_UPDATED,
+      '✅ Event Progressed to Marketing Review',
+      `Your event "${event.title}" was approved by GM and is now being reviewed by Marketing Head.`,
+      event.id,
+      'event',
+      `/events/${event.id}`
+    );
+  } else if (newStatus === 'completed') {
+    await notificationService.createNotification(
+      eventCreatorId,
+      NotificationType.EVENT_UPDATED,
+      '🏆 Event Completed Successfully!',
+      `Congratulations! Your event "${event.title}" has been marked as completed. Well done!`,
+      event.id,
+      'event',
+      `/events/${event.id}`
+    );
+  } else if (newStatus === 'draft' && oldStatus === 'rejected') {
+    await notificationService.createNotification(
+      eventCreatorId,
+      NotificationType.EVENT_UPDATED,
+      '📝 Event Ready for Revision',
+      `Your event "${event.title}" is back in draft mode. Please make the necessary changes and resubmit.`,
+      event.id,
+      'event',
+      `/events/${event.id}`
+    );
+  }
+
+  // Collaborative Updates - Notify when someone else makes changes
+  if (actor.id !== eventCreatorId) {
+    if (comment && comment.trim()) {
+      await notificationService.createNotification(
+        eventCreatorId,
+        NotificationType.EVENT_UPDATED,
+        '💬 New Comment on Your Event',
+        `${actorName} added a comment to "${event.title}": "${comment.substring(0, 100)}${comment.length > 100 ? '...' : ''}"`,
+        event.id,
+        'event',
+        `/events/${event.id}`
+      );
+    }
+  }
+}
 
 export default router; 

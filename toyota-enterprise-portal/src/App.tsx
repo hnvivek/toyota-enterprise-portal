@@ -17,6 +17,8 @@ import Branches from './pages/branches/Branches';
 import Products from './pages/products/Products';
 import PendingApprovalsPage from './pages/PendingApprovals';
 import EventTypes from './pages/EventTypes';
+import Notifications from './pages/Notifications';
+import NotificationManager from './pages/admin/NotificationManager';
 import NotFound from './pages/NotFound';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
@@ -61,6 +63,7 @@ function App() {
               {/* Protected routes */}
               <Route element={<Layout />}>
                 <Route path="/dashboard" element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" />} />
+                <Route path="/notifications" element={isAuthenticated ? <Notifications /> : <Navigate to="/login" />} />
                 <Route path="/pending-approvals" element={
                   <ProtectedRoute requiredRoles={['admin', 'general_manager', 'marketing_head']}>
                     <PendingApprovalsPage />
@@ -92,6 +95,11 @@ function App() {
                 <Route path="/event-types" element={
                   <ProtectedRoute requiredRoles={['admin']}>
                     <EventTypes />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/notifications" element={
+                  <ProtectedRoute requiredRoles={['admin']}>
+                    <NotificationManager />
                   </ProtectedRoute>
                 } />
               </Route>
