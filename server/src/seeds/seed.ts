@@ -164,12 +164,13 @@ async function seedEventTypes() {
   return createdEventTypes;
 }
 
-async function seedUsers(branches: Branch[]): Promise<User | null> {
+async function createUsers(branches: Branch[]): Promise<User[]> {
   const userRepository = AppDataSource.getRepository(User);
   
-  console.log('Starting user seeding process...');
+  console.log('Creating initial users...');
   
-  // Default users for each role with single branch assignments for workflow
+  const createdUsers: User[] = [];
+  
   const usersToCreate = [
     {
       username: 'admin',
@@ -212,9 +213,7 @@ async function seedUsers(branches: Branch[]): Promise<User | null> {
       description: 'Marketing Head - All Branches Access'
     }
   ];
-
-  let adminUser: User | null = null;
-
+  
   for (const userData of usersToCreate) {
     try {
       console.log(`Creating user: ${userData.email}`);
@@ -223,9 +222,7 @@ async function seedUsers(branches: Branch[]): Promise<User | null> {
       const existingUser = await userRepository.findOne({ where: { email: userData.email } });
       if (existingUser) {
         console.log(`User ${userData.email} already exists, skipping...`);
-        if (userData.role === UserRole.ADMIN) {
-          adminUser = existingUser;
-        }
+        createdUsers.push(existingUser);
         continue;
       }
 
@@ -244,22 +241,18 @@ async function seedUsers(branches: Branch[]): Promise<User | null> {
       }
 
       const savedUser = await userRepository.save(user);
-      console.log(`User created successfully: ${savedUser.email} (ID: ${savedUser.id})`);
-
-      if (userData.role === UserRole.ADMIN) {
-        adminUser = savedUser;
-        console.log('Admin user saved successfully');
-      }
+      createdUsers.push(savedUser);
+      console.log(`User created successfully: ${savedUser.email} (ID: ${savedUser.id}) - ${userData.role}`);
     } catch (error) {
       console.error(`Error creating user ${userData.email}:`, error);
     }
   }
 
   console.log('User seeding completed');
-  return adminUser;
+  return createdUsers;
 }
 
-async function seedEvents(branches: Branch[], eventTypes: EventType[], user: User, products: Product[]) {
+async function seedEvents(branches: Branch[], eventTypes: EventType[], users: User[], products: Product[]) {
   const eventRepository = AppDataSource.getRepository(Event);
   
   // Get current date for realistic date generation
@@ -267,17 +260,25 @@ async function seedEvents(branches: Branch[], eventTypes: EventType[], user: Use
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth(); // 0-based (0 = January)
   
-  // Helper function to generate random dates
-  const getRandomDate = (monthsBack: number, monthsForward: number) => {
-    const minMonthOffset = -monthsBack;
+  // Helper function to generate random dates (current month and future only)
+  const getRandomDate = (monthsForward: number) => {
     const maxMonthOffset = monthsForward;
-    const randomMonthOffset = Math.floor(Math.random() * (maxMonthOffset - minMonthOffset + 1)) + minMonthOffset;
+    const randomMonthOffset = Math.floor(Math.random() * (maxMonthOffset + 1)); // 0 to monthsForward
     
     const year = currentYear;
     const month = currentMonth + randomMonthOffset;
     const day = Math.floor(Math.random() * 28) + 1; // 1-28 to avoid month overflow issues
     
-    return new Date(year, month, day);
+    // If it's current month, make sure it's not in the past
+    const randomDate = new Date(year, month, day);
+    if (randomDate < now && randomMonthOffset === 0) {
+      // If current month and date is in past, set to today + random days
+      const futureDate = new Date(now);
+      futureDate.setDate(now.getDate() + Math.floor(Math.random() * 15) + 1); // 1-15 days from now
+      return futureDate;
+    }
+    
+    return randomDate;
   };
 
   // Helper function to get random duration (1-30 days)
@@ -298,15 +299,36 @@ async function seedEvents(branches: Branch[], eventTypes: EventType[], user: Use
   // Helper function to get random multiplier for budget/targets
   const getRandomMultiplier = () => 0.5 + Math.random() * 1.5; // 0.5x to 2x
 
-  // Generate 60-80 random events across all branches and event types
-  const totalEvents = 65 + Math.floor(Math.random() * 16); // 65-80 events
+  // Notes templates for variety
+  const notesTemplates = [
+    "Event focused on young professionals and families. Marketing team coordinated social media campaigns.",
+    "Special emphasis on test drives and customer experience. Coordination with local dealership partners.",
+    "Corporate tie-up event targeting fleet customers. Focus on bulk bookings and after-sales service.",
+    "Festival season campaign with special offers and financing options. High footfall expected.",
+    "Digital-first approach with QR codes for instant booking. Target tech-savvy customers.",
+    "Rural market penetration strategy. Local language communication and cultural sensitivity required.",
+    "Premium segment targeting with personalized customer interactions and exclusive previews.",
+    "Service camp combined with sales event. Focus on existing customer retention and referrals.",
+    "Mall activation with interactive displays and virtual reality test drive experiences.",
+    "Government employee special scheme launch. Documentation support and easy financing process.",
+    "Weekend family event with kids activities and food stalls. Community engagement focus.",
+    "Corporate B2B event targeting business customers and fleet requirements.",
+    "Social media influencer collaboration event with live streaming and contests.",
+    "",
+    "",
+    "" // Some events without notes
+  ];
+
+  // Generate 70-90 random events across all branches and event types
+  const totalEvents = 75 + Math.floor(Math.random() * 16); // 75-90 events
   
   const eventTitles = [
     'Q1 Digital Campaign', 'Q2 Marketing Push', 'Q3 Sales Drive', 'Q4 Festival Campaign',
     'Summer Sale Event', 'Monsoon Special', 'Festival Bonanza', 'Year End Sale',
     'New Model Launch', 'Test Drive Campaign', 'Corporate Event', 'Mall Display',
     'Road Show', 'Customer Meet', 'Dealer Conference', 'Training Program',
-    'Service Campaign', 'Loyalty Program', 'Referral Drive', 'Trade-in Event'
+    'Service Campaign', 'Loyalty Program', 'Referral Drive', 'Trade-in Event',
+    'Weekend Showcase', 'Family Carnival', 'Tech Expo', 'Green Drive Initiative'
   ];
 
   const locations = [
@@ -324,8 +346,12 @@ async function seedEvents(branches: Branch[], eventTypes: EventType[], user: Use
       .sort(() => 0.5 - Math.random())
       .slice(0, Math.floor(Math.random() * 3) + 1); // 1-3 products per event
     
-    // Random date generation (6 months back to 3 months forward)
-    const startDate = getRandomDate(6, 3);
+    // Use the specific priya_sales user for all events (so user can log in as priya.sales@toyota.com and edit them)
+    const priyaSalesUser = users.find(u => u.username === 'priya_sales');
+    const randomUser = priyaSalesUser || users[0]; // fallback to first user if not found
+    
+    // Random date generation (current month to 6 months forward)
+    const startDate = getRandomDate(6);
     const endDate = new Date(startDate);
     endDate.setDate(startDate.getDate() + getRandomDuration());
     
@@ -341,28 +367,35 @@ async function seedEvents(branches: Branch[], eventTypes: EventType[], user: Use
     const multiplier = getRandomMultiplier();
     
     const budget = Math.round(baseBudget * multiplier);
+    const leadTarget = Math.round((50 + Math.random() * 200) * multiplier); // 50-250 leads
     const enquiryTarget = Math.round((20 + Math.random() * 80) * multiplier); // 20-100 enquiries
     const orderTarget = Math.round((3 + Math.random() * 15) * multiplier); // 3-18 orders
     
     // Planned values (slightly different from targets)
     const plannedBudget = Math.round(budget * (0.9 + Math.random() * 0.2)); // 90%-110% of budget
+    const plannedLeads = Math.round(leadTarget * (0.8 + Math.random() * 0.4)); // 80%-120%
     const plannedEnquiries = Math.round(enquiryTarget * (0.8 + Math.random() * 0.4)); // 80%-120%
     const plannedOrders = Math.round(orderTarget * (0.8 + Math.random() * 0.4)); // 80%-120%
     
     // Actual values (only for completed events)
     let actualBudget: number | null = null;
+    let actualLeads: number | null = null;
     let actualEnquiries: number | null = null;
     let actualOrders: number | null = null;
     
     if (status === 'completed') {
       actualBudget = Math.round(plannedBudget * (0.85 + Math.random() * 0.3)); // 85%-115% of planned
+      actualLeads = Math.round(plannedLeads * (0.7 + Math.random() * 0.6)); // 70%-130% of planned
       actualEnquiries = Math.round(plannedEnquiries * (0.7 + Math.random() * 0.6)); // 70%-130% of planned
       actualOrders = Math.round(plannedOrders * (0.6 + Math.random() * 0.8)); // 60%-140% of planned
     }
 
+    // Random notes
+    const notes = notesTemplates[Math.floor(Math.random() * notesTemplates.length)];
+
     const productNames = randomProducts.map(p => p.name).join(' & ');
     const title = `${titleBase} - ${randomBranch.name} - ${productNames}`;
-    const description = `${new Date().getFullYear()} ${randomEventType.name} for ${productNames} at ${randomBranch.name} branch`;
+    const description = `${new Date().getFullYear()} ${randomEventType.name} for ${productNames} at ${randomBranch.name} branch. Organized by ${randomUser.username}.`;
 
     try {
       const event = eventRepository.create({
@@ -374,21 +407,36 @@ async function seedEvents(branches: Branch[], eventTypes: EventType[], user: Use
         status,
         budget,
         isPlanned: true,
+        isActive: true, // Ensure all events are active
+        
+        // Original target fields (these are the base targets used for planning)
         enquiryTarget,
         orderTarget,
+        
+        // Planned metrics (refined planning values, can differ from targets)
         plannedBudget,
-        actualBudget,
+        plannedLeads,
         plannedEnquiries,
-        actualEnquiries,
         plannedOrders,
+        
+        // Actual metrics (only for completed events)
+        actualBudget,
+        actualLeads,
+        actualEnquiries,
         actualOrders,
+        
+        // Notes
+        notes: notes || null,
+        
+        // Relationships
         branch: randomBranch,
-        branchId: randomBranch.id,
-        organizer: user,
-        userId: user.id,
+        organizer: randomUser,
         eventType: randomEventType,
-        isActive: true,
-        products: randomProducts
+        products: randomProducts,
+        
+        // Ensure IDs are set properly for relationships
+        branchId: randomBranch.id,
+        userId: randomUser.id
       });
       
       await eventRepository.save(event);
@@ -397,7 +445,7 @@ async function seedEvents(branches: Branch[], eventTypes: EventType[], user: Use
     }
   }
   
-  console.log(`Created ${totalEvents} randomized events across all branches with varied dates, statuses, and budgets`);
+  console.log(`Created ${totalEvents} randomized events across all branches with varied dates, statuses, budgets, and users`);
 }
 
 export async function seed() {
@@ -414,15 +462,12 @@ export async function seed() {
     const createdBranches = await seedBranches();
     const createdProducts = await seedProducts();
     const createdEventTypes = await seedEventTypes();
-    const adminUser = await seedUsers(createdBranches);
     
-    // Use admin user for creating events
-    if (!adminUser) {
-      throw new Error('Admin user not found in created users');
-    }
+    // Create initial users
+    const createdUsers = await createUsers(createdBranches);
     
-    // Create events with proper relationships
-    await seedEvents(createdBranches, createdEventTypes, adminUser, createdProducts);
+    // Create events with proper relationships and existing organizers
+    await seedEvents(createdBranches, createdEventTypes, createdUsers, createdProducts);
     
     console.log('Seed completed successfully');
   } catch (error) {

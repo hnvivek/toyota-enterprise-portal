@@ -89,6 +89,9 @@ export class Event {
   plannedBudget!: number | null;
 
   @Column('int', { nullable: true })
+  plannedLeads!: number | null;
+
+  @Column('int', { nullable: true })
   plannedEnquiries!: number | null;
 
   @Column('int', { nullable: true })
@@ -99,10 +102,17 @@ export class Event {
   actualBudget!: number | null;
 
   @Column('int', { nullable: true })
+  actualLeads!: number | null;
+
+  @Column('int', { nullable: true })
   actualEnquiries!: number | null;
 
   @Column('int', { nullable: true })
   actualOrders!: number | null;
+
+  // Notes field for managers to add additional information
+  @Column('text', { nullable: true })
+  notes!: string | null;
 
   @OneToMany(() => EventAttachment, attachment => attachment.event)
   attachments!: EventAttachment[];

@@ -78,12 +78,15 @@ const EventForm = () => {
     isPlanned: true,
     // Planned Metrics
     plannedBudget: '',
+    plannedLeads: '',
     plannedEnquiries: '',
     plannedOrders: '',
     // Actual Metrics (these are the only editable fields in metrics mode)
     actualBudget: '',
+    actualLeads: '',
     actualEnquiries: '',
     actualOrders: '',
+    notes: '',
   });
 
   const [attachments, setAttachments] = useState<File[]>([]);
@@ -145,11 +148,14 @@ const EventForm = () => {
             eventTypeId: event.eventType?.id || '',
             isPlanned: event.isPlanned,
             plannedBudget: event.plannedBudget?.toString() || '',
+            plannedLeads: event.plannedLeads?.toString() || '',
             plannedEnquiries: event.plannedEnquiries?.toString() || '',
             plannedOrders: event.plannedOrders?.toString() || '',
             actualBudget: event.actualBudget?.toString() || '',
+            actualLeads: event.actualLeads?.toString() || '',
             actualEnquiries: event.actualEnquiries?.toString() || '',
             actualOrders: event.actualOrders?.toString() || '',
+            notes: event.notes || '',
           };
           
           console.log('Setting formData:', newFormData);
@@ -275,8 +281,10 @@ const EventForm = () => {
       if (isMetricsMode) {
         const metricsData = {
           actualBudget: formData.actualBudget ? parseFloat(formData.actualBudget) : null,
+          actualLeads: formData.actualLeads ? parseInt(formData.actualLeads) : null,
           actualEnquiries: formData.actualEnquiries ? parseInt(formData.actualEnquiries) : null,
           actualOrders: formData.actualOrders ? parseInt(formData.actualOrders) : null,
+          notes: formData.notes || null,
         };
 
         await api.put(`events/${id}`, metricsData, {
@@ -338,11 +346,14 @@ const EventForm = () => {
         
         // Add optional metrics
         if (formData.plannedBudget) formDataToSend.append('plannedBudget', formData.plannedBudget);
+        if (formData.plannedLeads) formDataToSend.append('plannedLeads', formData.plannedLeads);
         if (formData.plannedEnquiries) formDataToSend.append('plannedEnquiries', formData.plannedEnquiries);
         if (formData.plannedOrders) formDataToSend.append('plannedOrders', formData.plannedOrders);
         if (formData.actualBudget) formDataToSend.append('actualBudget', formData.actualBudget);
+        if (formData.actualLeads) formDataToSend.append('actualLeads', formData.actualLeads);
         if (formData.actualEnquiries) formDataToSend.append('actualEnquiries', formData.actualEnquiries);
         if (formData.actualOrders) formDataToSend.append('actualOrders', formData.actualOrders);
+        if (formData.notes) formDataToSend.append('notes', formData.notes);
         
         // Add attachments
         attachments.forEach((file, index) => {
@@ -375,11 +386,14 @@ const EventForm = () => {
           branchId: parseInt(formData.branchId),
           eventTypeId: parseInt(formData.eventTypeId),
           plannedBudget: formData.plannedBudget ? parseFloat(formData.plannedBudget) : null,
+          plannedLeads: formData.plannedLeads ? parseInt(formData.plannedLeads) : null,
           plannedEnquiries: formData.plannedEnquiries ? parseInt(formData.plannedEnquiries) : null,
           plannedOrders: formData.plannedOrders ? parseInt(formData.plannedOrders) : null,
           actualBudget: formData.actualBudget ? parseFloat(formData.actualBudget) : null,
+          actualLeads: formData.actualLeads ? parseInt(formData.actualLeads) : null,
           actualEnquiries: formData.actualEnquiries ? parseInt(formData.actualEnquiries) : null,
           actualOrders: formData.actualOrders ? parseInt(formData.actualOrders) : null,
+          notes: formData.notes || null,
         };
 
         if (id) {
@@ -859,7 +873,37 @@ const EventForm = () => {
               <Divider sx={{ mb: 2 }} />
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12} md={3}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Expected Budget"
+                name="plannedBudget"
+                type="number"
+                value={formData.plannedBudget}
+                onChange={handleChange}
+                helperText="Target budget amount"
+                InputProps={{ readOnly: isMetricsMode }}
+                disabled={isMetricsMode}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={3}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Expected Leads"
+                name="plannedLeads"
+                type="number"
+                value={formData.plannedLeads}
+                onChange={handleChange}
+                helperText="Target number of leads"
+                InputProps={{ readOnly: isMetricsMode }}
+                disabled={isMetricsMode}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={3}>
               <TextField
                 fullWidth
                 size="small"
@@ -874,7 +918,7 @@ const EventForm = () => {
               />
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12} md={3}>
               <TextField
                 fullWidth
                 size="small"
@@ -897,13 +941,13 @@ const EventForm = () => {
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 {isMetricsMode ? 
                   'Update the actual performance after the event completion' : 
-                  'Record the actual performance after the event (can be updated later)'
+                  'These fields will be enabled after the event for recording actual performance'
                 }
               </Typography>
               <Divider sx={{ mb: 2 }} />
             </Grid>
 
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} md={3}>
               <TextField
                 fullWidth
                 size="small"
@@ -913,16 +957,61 @@ const EventForm = () => {
                 value={formData.actualBudget}
                 onChange={handleChange}
                 helperText="Actual amount spent"
+                disabled={!isMetricsMode}
                 sx={{ 
-                  backgroundColor: isMetricsMode ? 'action.hover' : 'transparent',
+                  backgroundColor: isMetricsMode ? 'action.hover' : 'grey.100',
                   '& .MuiOutlinedInput-root': {
-                    backgroundColor: isMetricsMode ? 'background.paper' : 'transparent'
+                    backgroundColor: isMetricsMode ? 'background.paper' : 'grey.50',
+                    '&.Mui-disabled': {
+                      backgroundColor: 'grey.100',
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'grey.300',
+                      }
+                    }
+                  },
+                  '& .MuiInputLabel-root.Mui-disabled': {
+                    color: 'grey.500',
+                  },
+                  '& .MuiFormHelperText-root.Mui-disabled': {
+                    color: 'grey.500',
                   }
                 }}
               />
             </Grid>
 
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} md={3}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Actual Leads"
+                name="actualLeads"
+                type="number"
+                value={formData.actualLeads}
+                onChange={handleChange}
+                helperText="Actual leads generated"
+                disabled={!isMetricsMode}
+                sx={{ 
+                  backgroundColor: isMetricsMode ? 'action.hover' : 'grey.100',
+                  '& .MuiOutlinedInput-root': {
+                    backgroundColor: isMetricsMode ? 'background.paper' : 'grey.50',
+                    '&.Mui-disabled': {
+                      backgroundColor: 'grey.100',
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'grey.300',
+                      }
+                    }
+                  },
+                  '& .MuiInputLabel-root.Mui-disabled': {
+                    color: 'grey.500',
+                  },
+                  '& .MuiFormHelperText-root.Mui-disabled': {
+                    color: 'grey.500',
+                  }
+                }}
+              />
+            </Grid>
+
+            <Grid item xs={12} md={3}>
               <TextField
                 fullWidth
                 size="small"
@@ -932,16 +1021,29 @@ const EventForm = () => {
                 value={formData.actualEnquiries}
                 onChange={handleChange}
                 helperText="Actual enquiries received"
+                disabled={!isMetricsMode}
                 sx={{ 
-                  backgroundColor: isMetricsMode ? 'action.hover' : 'transparent',
+                  backgroundColor: isMetricsMode ? 'action.hover' : 'grey.100',
                   '& .MuiOutlinedInput-root': {
-                    backgroundColor: isMetricsMode ? 'background.paper' : 'transparent'
+                    backgroundColor: isMetricsMode ? 'background.paper' : 'grey.50',
+                    '&.Mui-disabled': {
+                      backgroundColor: 'grey.100',
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'grey.300',
+                      }
+                    }
+                  },
+                  '& .MuiInputLabel-root.Mui-disabled': {
+                    color: 'grey.500',
+                  },
+                  '& .MuiFormHelperText-root.Mui-disabled': {
+                    color: 'grey.500',
                   }
                 }}
               />
             </Grid>
 
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} md={3}>
               <TextField
                 fullWidth
                 size="small"
@@ -951,12 +1053,51 @@ const EventForm = () => {
                 value={formData.actualOrders}
                 onChange={handleChange}
                 helperText="Actual orders received"
+                disabled={!isMetricsMode}
                 sx={{ 
-                  backgroundColor: isMetricsMode ? 'action.hover' : 'transparent',
+                  backgroundColor: isMetricsMode ? 'action.hover' : 'grey.100',
                   '& .MuiOutlinedInput-root': {
-                    backgroundColor: isMetricsMode ? 'background.paper' : 'transparent'
+                    backgroundColor: isMetricsMode ? 'background.paper' : 'grey.50',
+                    '&.Mui-disabled': {
+                      backgroundColor: 'grey.100',
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'grey.300',
+                      }
+                    }
+                  },
+                  '& .MuiInputLabel-root.Mui-disabled': {
+                    color: 'grey.500',
+                  },
+                  '& .MuiFormHelperText-root.Mui-disabled': {
+                    color: 'grey.500',
                   }
                 }}
+              />
+            </Grid>
+
+            {/* Notes Section */}
+            <Grid item xs={12}>
+              <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+                Notes & Additional Information
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Add any additional notes, observations, or comments about this event
+              </Typography>
+              <Divider sx={{ mb: 2 }} />
+            </Grid>
+
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                multiline
+                rows={4}
+                size="small"
+                label="Notes"
+                name="notes"
+                value={formData.notes}
+                onChange={handleChange}
+                helperText="Optional notes about the event, challenges faced, lessons learned, etc."
+                placeholder="Enter any additional information about this event..."
               />
             </Grid>
 

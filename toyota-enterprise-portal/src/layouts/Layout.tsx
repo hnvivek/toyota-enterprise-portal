@@ -316,6 +316,7 @@ const Layout = () => {
       { text: 'Branches', icon: <BusinessIcon />, path: '/branches', badge: null },
       { text: 'Products', icon: <ProductIcon />, path: '/products', badge: null },
       { text: 'Notification Manager', icon: <NotificationsIcon />, path: '/admin/notifications', badge: null },
+      { text: 'Admin Tools', icon: <SettingsIcon />, path: '/admin/tools', badge: null },
     ] : [])
   ];
 

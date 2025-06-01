@@ -237,11 +237,14 @@ router.post('/', auth, uploadAttachments, handleUploadError, async (req: Request
       eventTypeId,
       isPlanned,
       plannedBudget,
+      plannedLeads,
       plannedEnquiries,
       plannedOrders,
       actualBudget,
+      actualLeads,
       actualEnquiries,
       actualOrders,
+      notes,
     } = req.body;
 
     console.log('Creating event with data:', {
@@ -285,11 +288,14 @@ router.post('/', auth, uploadAttachments, handleUploadError, async (req: Request
       organizer,
       isPlanned: isPlanned === 'true' || isPlanned === true,
       plannedBudget: plannedBudget ? parseFloat(plannedBudget) : undefined,
+      plannedLeads: plannedLeads ? parseInt(plannedLeads) : undefined,
       plannedEnquiries: plannedEnquiries ? parseInt(plannedEnquiries) : undefined,
       plannedOrders: plannedOrders ? parseInt(plannedOrders) : undefined,
       actualBudget: actualBudget ? parseFloat(actualBudget) : undefined,
+      actualLeads: actualLeads ? parseInt(actualLeads) : undefined,
       actualEnquiries: actualEnquiries ? parseInt(actualEnquiries) : undefined,
       actualOrders: actualOrders ? parseInt(actualOrders) : undefined,
+      notes: notes || null,
     };
 
     const event = eventRepository.create(eventData);
@@ -476,17 +482,20 @@ router.put('/:id', auth, uploadAttachments, handleUploadError, async (req: Reque
       eventTypeId,
       isPlanned,
       plannedBudget,
+      plannedLeads,
       plannedEnquiries,
       plannedOrders,
       actualBudget,
+      actualLeads,
       actualEnquiries,
       actualOrders,
+      notes,
     } = req.body;
 
     // Check if this is a metrics-only update (only actual metrics fields are provided)
     const isMetricsOnlyUpdate = !title && !description && !location && !startDate && !endDate && 
                                 !branchId && !eventTypeId && !productIds &&
-                                (actualBudget !== undefined || actualEnquiries !== undefined || actualOrders !== undefined);
+                                (actualBudget !== undefined || actualLeads !== undefined || actualEnquiries !== undefined || actualOrders !== undefined || notes !== undefined);
 
     console.log('Update type:', isMetricsOnlyUpdate ? 'Metrics-only' : 'Full event update');
     console.log('Request body:', req.body);
@@ -499,11 +508,17 @@ router.put('/:id', auth, uploadAttachments, handleUploadError, async (req: Reque
       if (actualBudget !== undefined) {
         event.actualBudget = actualBudget ? parseFloat(actualBudget.toString()) : null;
       }
+      if (actualLeads !== undefined) {
+        event.actualLeads = actualLeads ? parseInt(actualLeads.toString()) : null;
+      }
       if (actualEnquiries !== undefined) {
         event.actualEnquiries = actualEnquiries ? parseInt(actualEnquiries.toString()) : null;
       }
       if (actualOrders !== undefined) {
         event.actualOrders = actualOrders ? parseInt(actualOrders.toString()) : null;
+      }
+      if (notes !== undefined) {
+        event.notes = notes || null;
       }
 
       const savedEvent = await eventRepository.save(event);
@@ -556,11 +571,14 @@ router.put('/:id', auth, uploadAttachments, handleUploadError, async (req: Reque
     
     // Only update metric fields if values are provided
     if (plannedBudget) event.plannedBudget = parseFloat(plannedBudget);
+    if (plannedLeads) event.plannedLeads = parseInt(plannedLeads);
     if (plannedEnquiries) event.plannedEnquiries = parseInt(plannedEnquiries);
     if (plannedOrders) event.plannedOrders = parseInt(plannedOrders);
     if (actualBudget !== undefined) event.actualBudget = actualBudget ? parseFloat(actualBudget.toString()) : null;
+    if (actualLeads !== undefined) event.actualLeads = actualLeads ? parseInt(actualLeads.toString()) : null;
     if (actualEnquiries !== undefined) event.actualEnquiries = actualEnquiries ? parseInt(actualEnquiries.toString()) : null;
     if (actualOrders !== undefined) event.actualOrders = actualOrders ? parseInt(actualOrders.toString()) : null;
+    if (notes !== undefined) event.notes = notes || null;
 
     const savedEvent = await eventRepository.save(event);
     
@@ -633,8 +651,11 @@ router.patch('/:id/status', auth, async (req: Request, res: Response) => {
       if (!event.actualBudget || event.actualBudget <= 0) {
         missingValues.push('Actual Cost');
       }
-      if (event.actualEnquiries === null || event.actualEnquiries === undefined) {
+      if (event.actualLeads === null || event.actualLeads === undefined) {
         missingValues.push('Actual Leads');
+      }
+      if (event.actualEnquiries === null || event.actualEnquiries === undefined) {
+        missingValues.push('Actual Enquiries');
       }
       if (event.actualOrders === null || event.actualOrders === undefined) {
         missingValues.push('Actual Orders');

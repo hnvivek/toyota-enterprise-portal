@@ -19,6 +19,7 @@ import PendingApprovalsPage from './pages/PendingApprovals';
 import EventTypes from './pages/EventTypes';
 import Notifications from './pages/Notifications';
 import NotificationManager from './pages/admin/NotificationManager';
+import AdminTools from './pages/admin/AdminTools';
 import NotFound from './pages/NotFound';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
@@ -100,6 +101,11 @@ function App() {
                 <Route path="/admin/notifications" element={
                   <ProtectedRoute requiredRoles={['admin']}>
                     <NotificationManager />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/tools" element={
+                  <ProtectedRoute requiredRoles={['admin']}>
+                    <AdminTools />
                   </ProtectedRoute>
                 } />
               </Route>

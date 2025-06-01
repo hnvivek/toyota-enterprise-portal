@@ -96,11 +96,15 @@ interface Event {
   }>;
   // Metrics
   plannedBudget?: number;
+  plannedLeads?: number;
   plannedEnquiries?: number;
   plannedOrders?: number;
   actualBudget?: number;
+  actualLeads?: number;
   actualEnquiries?: number;
   actualOrders?: number;
+  // Notes
+  notes?: string;
 }
 
 const EventDetails = () => {
@@ -285,13 +289,8 @@ const EventDetails = () => {
     
     const status = event.status.toLowerCase();
     
-    // Marketing Manager can edit final costs and metrics after approval
+    // Only Marketing Manager can edit final costs and metrics after approval
     if (currentUserRole === 'marketing_manager') {
-      return status === 'approved' || status === 'completed';
-    }
-    
-    // Sales Manager can edit metrics of their own events after approval (but not final costs)
-    if (currentUserRole === 'sales_manager' && isEventCreator) {
       return status === 'approved' || status === 'completed';
     }
     
@@ -317,7 +316,7 @@ const EventDetails = () => {
         return 'You can edit this event. After GM approval, editing will be locked.';
       }
       if (status === 'approved' || status === 'completed') {
-        return 'Event details are locked after approval. You can only edit post-event metrics.';
+        return 'Event details are locked after approval. Only Marketing Manager can edit metrics.';
       }
       return 'This event cannot be edited in its current status.';
     }
@@ -488,6 +487,7 @@ const EventDetails = () => {
   const isReadyForCompletion = () => {
     if (!event) return false;
     return event.actualBudget && event.actualBudget > 0 && 
+           event.actualLeads !== null && event.actualLeads !== undefined &&
            event.actualEnquiries !== null && event.actualEnquiries !== undefined &&
            event.actualOrders !== null && event.actualOrders !== undefined;
   };
@@ -497,6 +497,7 @@ const EventDetails = () => {
     if (!event) return [];
     const missing = [];
     if (!event.actualBudget || event.actualBudget <= 0) missing.push('Actual Cost');
+    if (event.actualLeads === null || event.actualLeads === undefined) missing.push('Actual Leads');
     if (event.actualEnquiries === null || event.actualEnquiries === undefined) missing.push('Actual Enquiries');  
     if (event.actualOrders === null || event.actualOrders === undefined) missing.push('Actual Orders');
     return missing;
@@ -753,8 +754,8 @@ const EventDetails = () => {
         </Grid>
 
         {/* Metrics Section */}
-        {(event.plannedBudget || event.plannedEnquiries || event.plannedOrders || 
-          event.actualBudget || event.actualEnquiries || event.actualOrders) && (
+        {(event.plannedBudget || event.plannedLeads || event.plannedEnquiries || event.plannedOrders || 
+          event.actualBudget || event.actualLeads || event.actualEnquiries || event.actualOrders) && (
           <Grid item xs={12}>
             <Card>
               <CardContent>
@@ -765,9 +766,9 @@ const EventDetails = () => {
                 
                 <Grid container spacing={3}>
                   {/* Event Cost Metrics */}
-                  <Grid item xs={12} md={4}>
-                    <Paper sx={{ p: 3, textAlign: 'center', border: '1px solid', borderColor: 'divider' }}>
-                      <BudgetIcon sx={{ fontSize: 40, color: 'info.main', mb: 1 }} />
+                  <Grid item xs={12} md={3}>
+                    <Paper sx={{ p: 2, textAlign: 'center', border: '1px solid', borderColor: 'divider' }}>
+                      <BudgetIcon sx={{ fontSize: 32, color: 'info.main', mb: 1 }} />
                       <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                         {event.status === 'completed' ? 'Final Cost' : 'Event Cost'}
                       </Typography>
@@ -801,11 +802,39 @@ const EventDetails = () => {
                     </Paper>
                   </Grid>
 
+                  {/* Lead Generation Metrics */}
+                  {(event.plannedLeads || event.actualLeads) && (
+                    <Grid item xs={12} md={3}>
+                      <Paper sx={{ p: 2, textAlign: 'center', border: '1px solid', borderColor: 'divider' }}>
+                        <PersonIcon sx={{ fontSize: 32, color: 'secondary.main', mb: 1 }} />
+                        <Typography variant="subtitle2" color="text.secondary" gutterBottom>Lead Generation</Typography>
+                        <Typography variant="h6" fontWeight="bold">
+                          {event.actualLeads !== undefined ? event.actualLeads : (
+                            <Box component="span" sx={{ color: 'warning.main', fontStyle: 'italic' }}>
+                              Pending
+                            </Box>
+                          )}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Target: {event.plannedLeads || 'TBD'}
+                        </Typography>
+                        {event.plannedLeads && event.actualLeads !== undefined && (
+                          <LinearProgress 
+                            variant="determinate" 
+                            value={calculateProgress(event.actualLeads, event.plannedLeads)}
+                            sx={{ mt: 1, height: 6, borderRadius: 3 }}
+                            color="secondary"
+                          />
+                        )}
+                      </Paper>
+                    </Grid>
+                  )}
+
                   {/* Enquiry Generation Metrics */}
                   {(event.plannedEnquiries || event.actualEnquiries) && (
-                    <Grid item xs={12} md={4}>
-                      <Paper sx={{ p: 3, textAlign: 'center', border: '1px solid', borderColor: 'divider' }}>
-                        <PersonIcon sx={{ fontSize: 40, color: 'warning.main', mb: 1 }} />
+                    <Grid item xs={12} md={3}>
+                      <Paper sx={{ p: 2, textAlign: 'center', border: '1px solid', borderColor: 'divider' }}>
+                        <PersonIcon sx={{ fontSize: 32, color: 'warning.main', mb: 1 }} />
                         <Typography variant="subtitle2" color="text.secondary" gutterBottom>Enquiry Generation</Typography>
                         <Typography variant="h6" fontWeight="bold">
                           {event.actualEnquiries !== undefined ? event.actualEnquiries : (
@@ -831,9 +860,9 @@ const EventDetails = () => {
 
                   {/* Sales Conversion Metrics */}
                   {(event.plannedOrders || event.actualOrders) && (
-                    <Grid item xs={12} md={4}>
-                      <Paper sx={{ p: 3, textAlign: 'center', border: '1px solid', borderColor: 'divider' }}>
-                        <ProductIcon sx={{ fontSize: 40, color: 'success.main', mb: 1 }} />
+                    <Grid item xs={12} md={3}>
+                      <Paper sx={{ p: 2, textAlign: 'center', border: '1px solid', borderColor: 'divider' }}>
+                        <ProductIcon sx={{ fontSize: 32, color: 'success.main', mb: 1 }} />
                         <Typography variant="subtitle2" color="text.secondary" gutterBottom>Sales Conversion</Typography>
                         <Typography variant="h6" fontWeight="bold">
                           {event.actualOrders !== undefined ? event.actualOrders : (
@@ -902,6 +931,25 @@ const EventDetails = () => {
                     </Grid>
                   ))}
                 </Grid>
+              </CardContent>
+            </Card>
+          </Grid>
+        )}
+
+        {/* Notes Section */}
+        {event.notes && event.notes.trim() && (
+          <Grid item xs={12}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                  <CommentIcon sx={{ mr: 1, color: 'primary.main' }} />
+                  Notes & Additional Information
+                </Typography>
+                <Paper sx={{ p: 3, bgcolor: 'grey.50', border: '1px solid', borderColor: 'divider' }}>
+                  <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+                    {event.notes}
+                  </Typography>
+                </Paper>
               </CardContent>
             </Card>
           </Grid>

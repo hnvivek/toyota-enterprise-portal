@@ -17,9 +17,8 @@ export const AppDataSource = new DataSource({
   username: process.env.DB_USERNAME || 'postgres',
   password: process.env.DB_PASSWORD || 'postgres',
   database: process.env.DB_NAME || 'toyota_enterprise_portal',
-  synchronize: true,
-  logging: true,
+  synchronize: true, // Always sync in development - auto-updates schema
+  logging: process.env.NODE_ENV !== 'production',
   entities: [Event, Branch, Product, EventType, User, EventAttachment, BudgetAllocation, EventComment, Notification, RecurringReminder],
-  subscribers: [],
-  migrations: []
+  subscribers: []
 }); 

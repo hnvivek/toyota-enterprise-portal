@@ -464,6 +464,10 @@ const Events = () => {
       return status === 'pending_marketing';
     }
     
+    if (currentUser.role === 'marketing_manager') {
+      return status === 'approved' || status === 'completed';
+    }
+    
     return false;
   };
 
