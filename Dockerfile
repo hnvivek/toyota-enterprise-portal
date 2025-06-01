@@ -51,9 +51,6 @@ RUN npm ci --only=production && npm cache clean --force
 # Copy built backend
 COPY --from=backend-build /app/backend/dist ./dist
 
-# Copy migration files for production
-COPY --from=backend-build /app/backend/src/migrations ./src/migrations
-
 # Copy built frontend to serve statically
 COPY --from=frontend-build /app/frontend/build ./public
 
