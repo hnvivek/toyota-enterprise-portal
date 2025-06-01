@@ -32,6 +32,9 @@ import {
   TrendingFlat as TrendingFlatIcon,
   BarChart as BarChartIcon,
   Analytics as AnalyticsIcon,
+  CheckCircle as CheckCircleIcon,
+  HourglassEmpty as HourglassEmptyIcon,
+  AccountBalanceWallet as AccountBalanceWalletIcon,
 } from '@mui/icons-material';
 import { api } from '../config/api';
 import { formatINR } from '../utils/format';
@@ -46,6 +49,9 @@ interface SummaryCardProps {
 
 interface DashboardSummary {
   totalEvents: number;
+  eventsExecuted: number;
+  eventsPending: number;
+  plannedCost: number;
   totalUsers: number;
   totalBranches: number;
   totalEventCost: number;
@@ -288,6 +294,9 @@ const AnalysisCard: React.FC<{
 const Dashboard = () => {
   const [summary, setSummary] = useState<DashboardSummary>({
     totalEvents: 0,
+    eventsExecuted: 0,
+    eventsPending: 0,
+    plannedCost: 0,
     totalUsers: 0,
     totalBranches: 0,
     totalEventCost: 0,
@@ -347,6 +356,9 @@ const Dashboard = () => {
       // Map backend field names to frontend interface names
       const mappedSummary = {
         ...summaryRes.data,
+        eventsExecuted: summaryRes.data.eventsExecuted || 0,
+        eventsPending: summaryRes.data.eventsPending || 0,
+        plannedCost: parseFloat(summaryRes.data.plannedCost || '0'),
         totalEventCost: parseFloat(summaryRes.data.totalBudget || '0'),
         totalPlannedEventCost: parseFloat(summaryRes.data.totalPlannedBudget || '0'),
         totalActualEventCost: parseFloat(summaryRes.data.totalActualBudget || '0')
@@ -505,7 +517,7 @@ const Dashboard = () => {
 
       {/* Summary Cards */}
       <Grid container spacing={2} sx={{ mb: 2 }}>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={2.4}>
           <SummaryCard
             title="Total Events"
             value={summary.totalEvents.toLocaleString()}
@@ -513,28 +525,36 @@ const Dashboard = () => {
             color="#e91e63"
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={2.4}>
           <SummaryCard
-            title="Total Users"
-            value={summary.totalUsers.toLocaleString()}
-            icon={<PeopleIcon />}
-            color="#e91e63"
+            title="Events Executed"
+            value={summary.eventsExecuted.toLocaleString()}
+            icon={<CheckCircleIcon />}
+            color="#4caf50"
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={2.4}>
           <SummaryCard
-            title="Total Branches"
-            value={summary.totalBranches.toLocaleString()}
-            icon={<BusinessIcon />}
-            color="#e91e63"
+            title="Events Pending"
+            value={summary.eventsPending.toLocaleString()}
+            icon={<HourglassEmptyIcon />}
+            color="#ff9800"
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={2.4}>
+          <SummaryCard
+            title="Planned Cost"
+            value={formatINR(summary.plannedCost)}
+            icon={<AccountBalanceWalletIcon />}
+            color="#2196f3"
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={2.4}>
           <SummaryCard
             title="Total Spent"
-            value={formatINR(summary.totalEventCost)}
+            value={formatINR(summary.totalActualEventCost)}
             icon={<RupeeIcon />}
-            color="#e91e63"
+            color="#9c27b0"
           />
         </Grid>
       </Grid>

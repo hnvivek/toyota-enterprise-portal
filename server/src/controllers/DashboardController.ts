@@ -88,8 +88,14 @@ export class DashboardController {
             // Get total users count from database (not just users who created events)
             const totalUsersCount = await this.userRepository.count();
             
+            // Calculate events by status
+            const executedEvents = events.filter(e => e.status === 'completed').length;
+            const pendingEvents = events.filter(e => e.status !== 'completed').length;
+            
             const metrics = {
                 total_events: events.length,
+                executed_events: executedEvents,
+                pending_events: pendingEvents,
                 total_users: totalUsersCount,
                 total_budget: events.reduce((sum, e) => sum + (Number(e.budget) || 0), 0),
                 total_planned_budget: events.reduce((sum, e) => sum + (Number(e.plannedBudget) || 0), 0),
@@ -114,10 +120,13 @@ export class DashboardController {
 
             const response_data = {
                 totalEvents: metrics.total_events,
+                eventsExecuted: metrics.executed_events,
+                eventsPending: metrics.pending_events,
                 totalUsers: metrics.total_users,
                 totalBranches: totalBranches,
                 upcomingEvents: metrics.upcoming_events,
                 totalBudget: metrics.total_budget.toFixed(2),
+                plannedCost: metrics.total_planned_budget.toFixed(2),
                 totalPlannedBudget: metrics.total_planned_budget.toFixed(2),
                 totalActualBudget: metrics.total_actual_budget.toFixed(2),
                 totalPlannedEnquiries: metrics.total_planned_enquiries,
