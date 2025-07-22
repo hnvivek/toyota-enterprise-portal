@@ -93,7 +93,7 @@ const Login = () => {
       // Immediately refresh user data after login
       await refreshUser();
       
-      navigate('/dashboard');
+      navigate('/home');
     } catch (err: any) {
       setError(err.response?.data?.message || 'An error occurred during login');
     } finally {
@@ -122,7 +122,7 @@ const Login = () => {
       // Immediately refresh user data after login
       await refreshUser();
       
-      navigate('/dashboard');
+      navigate('/home');
     } catch (err: any) {
       setError(err.response?.data?.message || 'An error occurred during login');
     } finally {

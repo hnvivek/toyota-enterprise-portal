@@ -152,7 +152,7 @@ const EventDetails = () => {
         await api.delete(`/events/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        navigate('/events');
+        navigate('/marketing/events');
       } catch (error) {
         console.error('Error deleting event:', error);
       }
@@ -519,7 +519,7 @@ const EventDetails = () => {
       {/* Header */}
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
         <IconButton 
-          onClick={() => navigate('/events')} 
+                      onClick={() => navigate('/marketing/events')} 
           sx={{ mr: 2, bgcolor: 'grey.100', '&:hover': { bgcolor: 'grey.200' } }}
         >
           <ArrowBackIcon />
@@ -573,7 +573,7 @@ const EventDetails = () => {
             <Button
               variant="contained"
               startIcon={<EditIcon />}
-              onClick={() => navigate(`/events/edit/${id}`)}
+              onClick={() => navigate(`/marketing/events/edit/${id}`)}
               sx={{ minWidth: 100 }}
             >
               Edit Event
@@ -583,7 +583,7 @@ const EventDetails = () => {
             <Button
               variant="outlined"
               startIcon={<EditIcon />}
-              onClick={() => navigate(`/events/edit/${id}?mode=metrics`)}
+              onClick={() => navigate(`/marketing/events/edit/${id}?mode=metrics`)}
               sx={{ minWidth: 100 }}
               color="secondary"
             >

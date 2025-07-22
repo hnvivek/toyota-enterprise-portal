@@ -136,7 +136,7 @@ export const EventForm: React.FC = () => {
       } else {
         await api.post('/events', submitData);
       }
-      navigate('/events');
+              navigate('/marketing/events');
     } catch (error) {
       console.error('Error saving event:', error);
     } finally {
@@ -309,7 +309,7 @@ export const EventForm: React.FC = () => {
               <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
                 <Button
                   variant="outlined"
-                  onClick={() => navigate('/events')}
+                  onClick={() => navigate('/marketing/events')}
                 >
                   Cancel
                 </Button>

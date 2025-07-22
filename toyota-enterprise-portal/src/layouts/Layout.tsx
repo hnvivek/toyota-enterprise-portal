@@ -272,68 +272,75 @@ const Layout = () => {
     { 
       text: 'Dashboard', 
       icon: <DashboardIcon />, 
-      path: '/dashboard',
+      path: '/marketing/dashboard',
       badge: null,
     },
     { 
       text: 'Events', 
       icon: <EventIcon />, 
-      path: '/events', 
+      path: '/marketing/events', 
       badge: null,
       submenu: [
         { 
           text: 'All Events', 
-          path: '/events',
+          path: '/marketing/events',
           badge: eventBadgeCount > 0 ? eventBadgeCount : null
         },
         ...(canCreateEvent() ? [{ 
           text: 'Create Event', 
-          path: '/events/new',
+          path: '/marketing/events/new',
           badge: null
         }] : []),
-        { text: 'Event Calendar', path: '/events/calendar' },
+        { text: 'Event Calendar', path: '/marketing/events/calendar' },
       ]
     },
     ...(canSeePendingApprovals() ? [{
       text: 'Pending Approvals',
       icon: <ReportsIcon />,
-      path: '/pending-approvals',
+      path: '/marketing/pending-approvals',
       badge: pendingApprovalsBadgeCount > 0 ? pendingApprovalsBadgeCount : null,
     }] : []),
     { 
       text: 'Analytics', 
       icon: <AnalyticsIcon />, 
-      path: '/analytics',
+      path: '/marketing/analytics',
       submenu: [
-        { text: 'Overview', path: '/analytics' },
-        { text: 'Reports', path: '/analytics/reports' },
-        { text: 'Performance', path: '/analytics/performance' },
+        { text: 'Overview', path: '/marketing/analytics' },
+        { text: 'Reports', path: '/marketing/analytics/reports' },
+        { text: 'Performance', path: '/marketing/analytics/performance' },
       ]
     },
     ...(isAdmin() ? [
-      { text: 'Event Types', icon: <CategoryIcon />, path: '/event-types', badge: null },
-      { text: 'Users', icon: <PeopleIcon />, path: '/users', badge: null },
-      { text: 'Branches', icon: <BusinessIcon />, path: '/branches', badge: null },
-      { text: 'Products', icon: <ProductIcon />, path: '/products', badge: null },
-      { text: 'Notification Manager', icon: <NotificationsIcon />, path: '/admin/notifications', badge: null },
-      { text: 'Admin Tools', icon: <SettingsIcon />, path: '/admin/tools', badge: null },
+      { text: 'Event Types', icon: <CategoryIcon />, path: '/marketing/event-types', badge: null },
+      { text: 'Users', icon: <PeopleIcon />, path: '/marketing/users', badge: null },
+      { text: 'Branches', icon: <BusinessIcon />, path: '/marketing/branches', badge: null },
+      { text: 'Products', icon: <ProductIcon />, path: '/marketing/products', badge: null },
+      { text: 'Notification Manager', icon: <NotificationsIcon />, path: '/marketing/admin/notifications', badge: null },
+      { text: 'Admin Tools', icon: <SettingsIcon />, path: '/marketing/admin/tools', badge: null },
     ] : [])
   ];
 
   const secondaryMenuItems = [
-    { text: 'Help & Support', icon: <HelpIcon />, path: '/help' },
+    { text: 'Help & Support', icon: <HelpIcon />, path: '/marketing/help' },
   ];
 
   // Generate breadcrumbs from current path
   const getBreadcrumbs = () => {
     const pathnames = location.pathname.split('/').filter(x => x);
+    
+    // Skip 'marketing' from the path since we're already in the marketing app
+    const filteredPathnames = pathnames.filter(x => x !== 'marketing');
+    
     const breadcrumbItems: Array<{ label: string; path: string; icon?: React.ReactElement }> = [
-      { label: 'Home', path: '/dashboard', icon: <HomeIcon fontSize="small" /> }
+      { label: 'Dashboard', path: '/marketing/dashboard', icon: <HomeIcon fontSize="small" /> }
     ];
 
-    pathnames.forEach((pathname, index) => {
-      const path = `/${pathnames.slice(0, index + 1).join('/')}`;
-      const label = pathname.charAt(0).toUpperCase() + pathname.slice(1);
+    filteredPathnames.forEach((pathname, index) => {
+      // Skip dashboard as it's already added as the first item
+      if (pathname === 'dashboard') return;
+      
+      const path = `/marketing/${filteredPathnames.slice(0, index + 1).join('/')}`;
+      const label = pathname.charAt(0).toUpperCase() + pathname.slice(1).replace('-', ' ');
       breadcrumbItems.push({ label, path });
     });
 
@@ -581,7 +588,7 @@ const Layout = () => {
           height: 64, 
           minHeight: 64 
         }}>
-          {/* Left Section - Mobile Menu + Breadcrumbs */}
+          {/* Left Section - Mobile Menu + Back Button + Breadcrumbs */}
           <Box sx={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
             <IconButton
               color="inherit"
@@ -596,6 +603,49 @@ const Layout = () => {
             >
               <MenuIcon />
             </IconButton>
+
+            {/* Back to Applications Button */}
+            <Tooltip title="Back to Applications">
+              <IconButton
+                onClick={() => navigate('/home')}
+                sx={{ 
+                  mr: 2,
+                  bgcolor: alpha(theme.palette.primary.main, 0.1),
+                  color: theme.palette.primary.main,
+                  '&:hover': { 
+                    bgcolor: alpha(theme.palette.primary.main, 0.2),
+                    transform: 'scale(1.05)'
+                  },
+                  transition: 'all 0.2s ease'
+                }}
+                size="small"
+              >
+                <HomeIcon />
+              </IconButton>
+            </Tooltip>
+
+            {/* App Label */}
+            <Box sx={{ 
+              mr: 2, 
+              px: 2, 
+              py: 0.5, 
+              borderRadius: 2, 
+              bgcolor: alpha(theme.palette.primary.main, 0.1),
+              display: { xs: 'none', sm: 'flex' },
+              alignItems: 'center',
+              gap: 1
+            }}>
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  color: theme.palette.primary.main,
+                  fontWeight: 600,
+                  fontSize: '0.875rem'
+                }}
+              >
+                Marketing App
+              </Typography>
+            </Box>
 
             {/* Modern Breadcrumbs */}
             <Breadcrumbs 
@@ -778,7 +828,7 @@ const Layout = () => {
           </Typography>
         </Box>
         
-        <MenuItem onClick={() => navigate('/profile')}>
+        <MenuItem onClick={() => navigate('/marketing/profile')}>
           <PersonIcon sx={{ mr: 2 }} />
           Profile Settings
         </MenuItem>
@@ -909,7 +959,7 @@ const Layout = () => {
         
         {notifications.length > 10 && (
           <Box sx={{ p: 1, borderTop: `1px solid ${theme.palette.divider}`, textAlign: 'center' }}>
-            <Button size="small" onClick={() => navigate('/notifications')}>
+            <Button size="small" onClick={() => navigate('/marketing/notifications')}>
               View All Notifications
             </Button>
           </Box>

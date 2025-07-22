@@ -295,7 +295,7 @@ const EventCalendar = () => {
               boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
             },
           }}
-          onClick={() => navigate(`/events/${eventData.id}`)}
+                        onClick={() => navigate(`/marketing/events/${eventData.id}`)}
         >
           {eventData.title}
         </Box>
@@ -368,13 +368,13 @@ const EventCalendar = () => {
   );
 
   const handleSelectEvent = (event: CalendarEvent) => {
-    navigate(`/events/${event.resource.id}`);
+            navigate(`/marketing/events/${event.resource.id}`);
   };
 
   const handleSelectSlot = ({ start }: { start: Date }) => {
     if (canCreateEvent()) {
       const startISO = moment(start).toISOString();
-      navigate(`/events/new?startDate=${startISO}`);
+              navigate(`/marketing/events/new?startDate=${startISO}`);
     }
   };
 
@@ -433,7 +433,7 @@ const EventCalendar = () => {
               <Button
                 variant="contained"
                 startIcon={<AddIcon />}
-                onClick={() => navigate('/events/new')}
+                onClick={() => navigate('/marketing/events/new')}
                 sx={{ 
                   fontWeight: 600,
                   borderRadius: 2,

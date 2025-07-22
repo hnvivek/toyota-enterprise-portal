@@ -144,7 +144,7 @@ const PendingApprovals = () => {
                       '&:hover': { backgroundColor: 'action.hover' },
                       cursor: 'pointer'
                     }}
-                    onClick={() => navigate(`/events/${event.id}`)}
+                    onClick={() => navigate(`/marketing/events/${event.id}`)}
                   >
                     <TableCell>
                       <Box>
@@ -189,7 +189,7 @@ const PendingApprovals = () => {
                           color="primary"
                           onClick={(e) => {
                             e.stopPropagation();
-                            navigate(`/events/${event.id}`);
+                            navigate(`/marketing/events/${event.id}`);
                           }}
                         >
                           <ViewIcon fontSize="small" />
@@ -207,7 +207,7 @@ const PendingApprovals = () => {
           <Box sx={{ mt: 2, textAlign: 'center' }}>
             <Button
               variant="outlined"
-              onClick={() => navigate('/events')}
+              onClick={() => navigate('/marketing/events')}
               size="small"
             >
               View All Events

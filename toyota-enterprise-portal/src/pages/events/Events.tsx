@@ -1684,7 +1684,7 @@ const Events = () => {
               <Button
                 variant="contained"
                 startIcon={<AddIcon />}
-                onClick={() => navigate('/events/new')}
+                onClick={() => navigate('/marketing/events/new')}
                 sx={{ 
                   backgroundColor: 'primary.main',
                   '&:hover': { backgroundColor: 'primary.dark' },
@@ -1750,7 +1750,7 @@ const Events = () => {
               breakpoint="960px"
               style={{ width: '100%' }}
               rowClassName={(data) => data.isNew ? 'p-highlight' : ''}
-              onRowClick={(e) => navigate(`/events/${e.data.id}`)}
+              onRowClick={(e) => navigate(`/marketing/events/${e.data.id}`)}
               exportFilename={`events_${new Date().toISOString().split('T')[0]}`}
               ref={dt}
             >

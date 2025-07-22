@@ -294,7 +294,7 @@ const EventForm = () => {
           }
         });
 
-        navigate(`/events/${id}`);
+                  navigate(`/marketing/events/${id}`);
         return;
       }
 
@@ -405,7 +405,7 @@ const EventForm = () => {
 
       // Redirect to the event's view page
       const eventId = id || response.data.id;
-      navigate(`/events/${eventId}`);
+                navigate(`/marketing/events/${eventId}`);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error saving event');
     }
@@ -607,7 +607,7 @@ const EventForm = () => {
   return (
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-        <IconButton onClick={() => navigate(id ? `/events/${id}` : '/events')} sx={{ mr: 2 }}>
+                  <IconButton onClick={() => navigate(id ? `/marketing/events/${id}` : '/marketing/events')} sx={{ mr: 2 }}>
           <ArrowBackIcon />
         </IconButton>
         <Box>
@@ -1105,7 +1105,7 @@ const EventForm = () => {
               <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
                 <Button
                   variant="outlined"
-                  onClick={() => navigate(id ? `/events/${id}` : '/events')}
+                  onClick={() => navigate(id ? `/marketing/events/${id}` : '/marketing/events')}
                 >
                   Cancel
                 </Button>
